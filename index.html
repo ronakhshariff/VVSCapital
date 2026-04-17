@@ -43,6 +43,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:500;display:flex;align-items:cen
 .nav-links{display:flex;gap:28px;list-style:none;}
 .nav-links a{color:var(--text2);text-decoration:none;font-size:13px;transition:color .2s;}
 .nav-links a:hover{color:var(--text);}
+.nav-links a.mx-link{color:var(--gold);}
 .nav-pill{display:flex;align-items:center;gap:7px;}
 .live-dot{width:7px;height:7px;border-radius:50%;background:var(--green);animation:blink 2s infinite;}
 .nav-status{font-size:11px;color:var(--text2);}
@@ -212,6 +213,34 @@ footer{position:relative;z-index:1;border-top:1px solid var(--border);padding:38
 .foot-brand{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:3px;color:var(--gold);}
 .foot-note{font-size:11px;color:var(--text3);font-weight:300;max-width:500px;}
 @media(max-width:768px){#chat-section{padding:60px 20px;}footer{padding:26px 20px;}}
+
+/* MATRIX */
+#matrix-section{position:relative;z-index:1;border-top:1px solid var(--border);background:linear-gradient(180deg,var(--bg),var(--bg2));padding:86px 40px;}
+.matrix-inner{max-width:1320px;margin:0 auto;}
+.matrix-head{display:flex;align-items:flex-end;justify-content:space-between;gap:22px;flex-wrap:wrap;margin-bottom:28px;}
+.matrix-copy{max-width:520px;}
+.matrix-actions{display:flex;gap:8px;background:var(--bg2);border:1px solid var(--border);padding:4px;border-radius:10px;}
+.mx-tab{background:transparent;border:none;color:var(--text2);font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.8px;padding:7px 12px;border-radius:7px;cursor:pointer;transition:all .2s;text-transform:uppercase;}
+.mx-tab.on{background:var(--gold);color:#050608;}
+.matrix-wrap{border:1px solid var(--border);background:rgba(11,13,18,.86);border-radius:18px;overflow:hidden;box-shadow:0 24px 80px rgba(0,0,0,.28);}
+.matrix-grid{display:grid;grid-template-columns:1.1fr .7fr .7fr .7fr .7fr 1fr;}
+.mx-cell{min-height:72px;padding:16px;border-bottom:1px solid var(--border);border-right:1px solid var(--border);display:flex;flex-direction:column;justify-content:center;gap:5px;}
+.mx-cell:nth-child(6n){border-right:none;}
+.mx-head{min-height:44px;background:rgba(143,109,255,.06);font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1.2px;text-transform:uppercase;color:var(--text3);}
+.mx-sym{font-family:'Bebas Neue',sans-serif;font-size:25px;letter-spacing:2px;color:var(--gold);line-height:1;}
+.mx-name{font-size:11px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.mx-num{font-family:'DM Mono',monospace;font-size:18px;color:var(--text);}
+.mx-small{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;}
+.mx-score{height:5px;background:var(--bg3);border-radius:4px;overflow:hidden;margin-top:3px;}
+.mx-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--gold),var(--goldl));}
+.mx-role{display:inline-flex;width:max-content;max-width:100%;padding:5px 9px;border:1px solid rgba(143,109,255,.24);background:var(--goldd);border-radius:7px;color:var(--goldl);font-size:10px;letter-spacing:.8px;text-transform:uppercase;}
+.matrix-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:14px;}
+.mx-tile{border:1px solid var(--border);background:var(--bg2);border-radius:14px;padding:16px;}
+.mx-tile-l{font-size:9px;letter-spacing:1.4px;text-transform:uppercase;color:var(--text3);margin-bottom:7px;}
+.mx-tile-v{font-family:'Bebas Neue',sans-serif;font-size:30px;letter-spacing:2px;color:var(--text);line-height:1;}
+.mx-tile-v span{color:var(--gold);}
+@media(max-width:900px){#matrix-section{padding:70px 20px;}.matrix-grid{grid-template-columns:1fr;}.mx-cell{border-right:none;min-height:auto}.mx-head{display:none}.mx-cell{display:grid;grid-template-columns:110px 1fr;align-items:center}.mx-cell::before{content:attr(data-label);font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);letter-spacing:1px;text-transform:uppercase}.mx-asset{grid-template-columns:1fr}.mx-asset::before{display:none}.matrix-summary{grid-template-columns:1fr 1fr;}}
+@media(max-width:540px){.matrix-summary{grid-template-columns:1fr;}}
 </style>
 </head>
 <body>
@@ -231,6 +260,7 @@ footer{position:relative;z-index:1;border-top:1px solid var(--border);padding:38
   </div>
   <ul class="nav-links">
     <li><a href="#stocks-section">Markets</a></li>
+    <li><a class="mx-link" href="#matrix-section">Matrix</a></li>
     <li><a href="#chat-section">AI Chat</a></li>
   </ul>
   <div class="nav-pill">
@@ -288,6 +318,28 @@ footer{position:relative;z-index:1;border-top:1px solid var(--border);padding:38
   </div>
   <div class="stock-grid" id="stockGrid"></div>
   <div class="detail-panel" id="detailPanel"></div>
+</div>
+
+<!-- MATRIX -->
+<div id="matrix-section">
+  <div class="matrix-inner">
+    <div class="matrix-head">
+      <div class="matrix-copy">
+        <span class="sec-label">VVS Intelligence Matrix</span>
+        <h2 class="sec-title">The Matrix</h2>
+        <p class="sec-desc" style="margin-bottom:0;">A distilled conviction map for the full watchlist — upside, confidence, risk, momentum, and portfolio role in one clean read.</p>
+      </div>
+      <div class="matrix-actions">
+        <button class="mx-tab on" onclick="setMatrixMode('conviction',this)">Conviction</button>
+        <button class="mx-tab" onclick="setMatrixMode('upside',this)">Upside</button>
+        <button class="mx-tab" onclick="setMatrixMode('risk',this)">Risk</button>
+      </div>
+    </div>
+    <div class="matrix-wrap">
+      <div class="matrix-grid" id="matrixGrid"></div>
+    </div>
+    <div class="matrix-summary" id="matrixSummary"></div>
+  </div>
 </div>
 
 <!-- CHAT -->
@@ -390,7 +442,7 @@ const MARKET_REFRESH_HOUR=7;
 const MARKET_REFRESH_MINUTE=45;
 const MARKET_REFRESH_KEY='vvs_market_refresh_day';
 let demoMode=false;
-let quotes={}, openSym=null, detailChart=null, currentTF='1M', fetchingAll=false, marketRefreshTimer=null;
+let quotes={}, openSym=null, detailChart=null, currentTF='1M', matrixMode='conviction', fetchingAll=false, marketRefreshTimer=null;
 
 // ═══════════════════════════════
 // KEYS & INIT
@@ -404,12 +456,12 @@ function loadDemo(){
   demoMode=true;
   WATCHLIST.forEach(s=>{quotes[s.sym]={...DEMO_QUOTES[s.sym]};});
   hideBanner('Demo mode — simulated prices. Start localhost to go live.');
-  renderAll(); buildTicker(); setStatus(true);
+  renderAll(); renderMatrix(); buildTicker(); setStatus(true);
 }
 
 function loadFallback(){
   WATCHLIST.forEach(s=>{quotes[s.sym]={...DEMO_QUOTES[s.sym]};});
-  renderAll(); buildTicker();
+  renderAll(); renderMatrix(); buildTicker();
 }
 
 function hideBanner(msg){
@@ -503,7 +555,7 @@ async function fetchAll(opts={}){
   setStatus(false,'Fetching live prices...');
   if(showSkeleton) renderSkeletons();
   await Promise.all(WATCHLIST.map(async s=>{const q=await fetchQuote(s.sym);if(q)quotes[s.sym]=q;}));
-  renderAll(); buildTicker(); setStatus(true,`Live Connected · Updated ${timeLabel()}`);
+  renderAll(); renderMatrix(); buildTicker(); setStatus(true,`Live Connected · Updated ${timeLabel()}`);
   updateAlphaUsage();
   fetchingAll=false;
 }
@@ -620,6 +672,76 @@ function setTF(tf,btn){
   currentTF=tf;
   document.querySelectorAll('.tf').forEach(b=>b.classList.remove('on'));
   btn.classList.add('on');
+  renderMatrix();
+}
+
+// ═══════════════════════════════
+// MATRIX
+// ═══════════════════════════════
+function typeRisk(type){
+  return {ETF:30,Index:28,Tech:58,AI:76,Media:68,Apparel:64}[type]||55;
+}
+
+function matrixRole(s,fc,conf,risk){
+  if(s.type==='AI'&&fc['2Y']>45) return 'Asymmetric Growth';
+  if(s.type==='ETF'&&risk<35) return 'Portfolio Core';
+  if(s.type==='Index') return 'Market Compass';
+  if(conf>=84) return 'High Conviction';
+  if(s.cur==='CAD') return 'Canada Sleeve';
+  if(risk>70) return 'Tactical Satellite';
+  return 'Quality Watch';
+}
+
+function matrixRows(){
+  return WATCHLIST.map(s=>{
+    const d=quotes[s.sym]||DEMO_QUOTES[s.sym];
+    const fc=FORECASTS[s.sym]||{};
+    const conf=CONFIDENCE[s.sym]||70;
+    const upside=fc['2Y']||0;
+    const near=fc[currentTF]??fc['1M']??0;
+    const risk=Math.min(95,Math.max(12,typeRisk(s.type)+(d?.pct<0?5:0)+(upside>45?8:0)-(conf-70)/4));
+    const momentum=Math.min(99,Math.max(1,50+(near*4)+(d?.pct||0)*5));
+    const conviction=Math.round((conf*.46)+(Math.max(upside,0)*.44)+(momentum*.10)-(risk*.18));
+    return{...s,d,fc,conf,upside,near,risk:Math.round(risk),momentum:Math.round(momentum),conviction:Math.max(1,Math.min(99,conviction)),role:matrixRole(s,fc,conf,risk)};
+  }).sort((a,b)=>{
+    if(matrixMode==='upside') return b.upside-a.upside;
+    if(matrixMode==='risk') return a.risk-b.risk;
+    return b.conviction-a.conviction;
+  });
+}
+
+function setMatrixMode(mode,btn){
+  matrixMode=mode;
+  document.querySelectorAll('.mx-tab').forEach(b=>b.classList.remove('on'));
+  if(btn) btn.classList.add('on');
+  renderMatrix();
+}
+
+function renderMatrix(){
+  const grid=document.getElementById('matrixGrid'); if(!grid) return;
+  const rows=matrixRows();
+  grid.innerHTML=[
+    ['Asset','Conviction','Upside','Risk','Momentum','Role'].map(h=>`<div class="mx-cell mx-head">${h}</div>`).join(''),
+    rows.map(r=>`
+      <div class="mx-cell mx-asset" data-label="Asset"><div class="mx-sym">${r.sym}</div><div class="mx-name">${r.name}</div></div>
+      <div class="mx-cell" data-label="Conviction"><div class="mx-num">${r.conviction}</div><div class="mx-score"><div class="mx-fill" style="width:${r.conviction}%"></div></div></div>
+      <div class="mx-cell" data-label="2Y Upside"><div class="mx-num ${r.upside>=0?'up':'dn'}">${r.upside>=0?'+':''}${r.upside.toFixed(1)}%</div><div class="mx-small">2Y forecast</div></div>
+      <div class="mx-cell" data-label="Risk"><div class="mx-num">${r.risk}</div><div class="mx-score"><div class="mx-fill" style="width:${r.risk}%;background:${r.risk>70?'var(--red)':r.risk>45?'var(--gold)':'var(--green)'}"></div></div></div>
+      <div class="mx-cell" data-label="Momentum"><div class="mx-num">${r.momentum}</div><div class="mx-small">${currentTF} lens</div></div>
+      <div class="mx-cell" data-label="Role"><span class="mx-role">${r.role}</span></div>
+    `).join('')
+  ].join('');
+
+  const summary=document.getElementById('matrixSummary');
+  if(summary){
+    const top=rows[0], upside=[...rows].sort((a,b)=>b.upside-a.upside)[0], safest=[...rows].sort((a,b)=>a.risk-b.risk)[0];
+    const avg=Math.round(rows.reduce((sum,r)=>sum+r.conviction,0)/rows.length);
+    summary.innerHTML=`
+      <div class="mx-tile"><div class="mx-tile-l">Top Conviction</div><div class="mx-tile-v"><span>${top.sym}</span> ${top.conviction}</div></div>
+      <div class="mx-tile"><div class="mx-tile-l">Max Upside</div><div class="mx-tile-v"><span>${upside.sym}</span> +${upside.upside.toFixed(0)}%</div></div>
+      <div class="mx-tile"><div class="mx-tile-l">Lowest Risk</div><div class="mx-tile-v"><span>${safest.sym}</span> ${safest.risk}</div></div>
+      <div class="mx-tile"><div class="mx-tile-l">Matrix Average</div><div class="mx-tile-v"><span>${avg}</span>/99</div></div>`;
+  }
 }
 
 // ═══════════════════════════════
