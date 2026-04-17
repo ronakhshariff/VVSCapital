@@ -386,9 +386,11 @@ const FORECASTS = {
 
 const CONFIDENCE = {XEQT:78,SPY:84,AAPL:82,MSFT:87,GOOG:80,META:79,NVDA:76,PLTR:62,VTI:81,VOO:83,QQQ:78,AVUV:73,XBB:72,XEI:74,XEQ:70,NFLX:71,NKE:61,INTC:58};
 
-const AUTO_REFRESH_MS=15*60*1000;
+const MARKET_REFRESH_HOUR=7;
+const MARKET_REFRESH_MINUTE=45;
+const MARKET_REFRESH_KEY='vvs_market_refresh_day';
 let demoMode=false;
-let quotes={}, openSym=null, detailChart=null, currentTF='1M', fetchingAll=false, autoRefreshTimer=null;
+let quotes={}, openSym=null, detailChart=null, currentTF='1M', fetchingAll=false, marketRefreshTimer=null;
 
 // ═══════════════════════════════
 // KEYS & INIT
@@ -403,6 +405,11 @@ function loadDemo(){
   WATCHLIST.forEach(s=>{quotes[s.sym]={...DEMO_QUOTES[s.sym]};});
   hideBanner('Demo mode — simulated prices. Start localhost to go live.');
   renderAll(); buildTicker(); setStatus(true);
+}
+
+function loadFallback(){
+  WATCHLIST.forEach(s=>{quotes[s.sym]={...DEMO_QUOTES[s.sym]};});
+  renderAll(); buildTicker();
 }
 
 function hideBanner(msg){
@@ -420,6 +427,21 @@ function setStatus(ok,msg){
 
 function timeLabel(){
   return new Date().toLocaleTimeString([], {hour:'numeric',minute:'2-digit'});
+}
+
+function localDayKey(date=new Date()){
+  return date.toLocaleDateString('en-CA');
+}
+
+function isWeekday(date=new Date()){
+  const day=date.getDay();
+  return day!==0&&day!==6;
+}
+
+function marketOpenTime(date=new Date()){
+  const d=new Date(date);
+  d.setHours(MARKET_REFRESH_HOUR,MARKET_REFRESH_MINUTE,0,0);
+  return d;
 }
 
 async function updateAlphaUsage(){
@@ -493,11 +515,44 @@ async function refreshAll(){
 }
 
 function startAutoRefresh(){
-  if(autoRefreshTimer) clearInterval(autoRefreshTimer);
-  autoRefreshTimer=setInterval(()=>{
-    if(document.hidden) return;
+  if(marketRefreshTimer) clearTimeout(marketRefreshTimer);
+  const now=new Date();
+  const todayKey=localDayKey(now);
+  const alreadyRan=localStorage.getItem(MARKET_REFRESH_KEY)===todayKey;
+  const refreshAt=marketOpenTime(now);
+
+  if(isWeekday(now)&&now>=refreshAt&&!alreadyRan){
     fetchAll({showSkeleton:false});
-  },AUTO_REFRESH_MS);
+    localStorage.setItem(MARKET_REFRESH_KEY,todayKey);
+  }
+
+  let next=marketOpenTime(now);
+  if(now>=next||!isWeekday(now)){
+    do{
+      next.setDate(next.getDate()+1);
+      next.setHours(MARKET_REFRESH_HOUR,MARKET_REFRESH_MINUTE,0,0);
+    }while(!isWeekday(next));
+  }
+
+  const delay=Math.max(next.getTime()-now.getTime(),60000);
+  marketRefreshTimer=setTimeout(()=>{
+    if(!document.hidden) {
+      fetchAll({showSkeleton:false});
+      localStorage.setItem(MARKET_REFRESH_KEY,localDayKey());
+    }
+    startAutoRefresh();
+  },delay);
+}
+
+function maybeRunDailyMarketRefresh(){
+  const now=new Date();
+  const todayKey=localDayKey(now);
+  const alreadyRan=localStorage.getItem(MARKET_REFRESH_KEY)===todayKey;
+  const refreshAt=marketOpenTime(now);
+  if(isWeekday(now)&&now>=refreshAt&&!alreadyRan){
+    fetchAll({showSkeleton:false});
+    localStorage.setItem(MARKET_REFRESH_KEY,todayKey);
+  }
 }
 
 // ═══════════════════════════════
@@ -865,8 +920,10 @@ function addMsg(role,content){
 // ═══════════════════════════════
 window.addEventListener('load',()=>{
   hideBanner('Local backend connected.');
-  fetchAll({showSkeleton:true});
+  loadFallback();
+  setStatus(true,'Cached baseline · daily live refresh 7:45 AM');
   updateAlphaUsage();
+  maybeRunDailyMarketRefresh();
   startAutoRefresh();
 
   document.getElementById('chatInp').addEventListener('keydown',e=>{if(e.key==='Enter')sendChat();});
