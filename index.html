@@ -224,6 +224,7 @@ footer{position:relative;z-index:1;border-top:1px solid var(--border);padding:38
 .mx-tab.on{background:var(--gold);color:#050608;}
 .matrix-wrap{border:1px solid var(--border);background:rgba(11,13,18,.86);border-radius:18px;overflow:hidden;box-shadow:0 24px 80px rgba(0,0,0,.28);}
 .matrix-grid{display:grid;grid-template-columns:1.1fr .7fr .7fr .7fr .7fr 1fr;}
+.matrix-mobile{display:none;}
 .mx-cell{min-height:72px;padding:16px;border-bottom:1px solid var(--border);border-right:1px solid var(--border);display:flex;flex-direction:column;justify-content:center;gap:5px;}
 .mx-cell:nth-child(6n){border-right:none;}
 .mx-head{min-height:44px;background:rgba(143,109,255,.06);font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1.2px;text-transform:uppercase;color:var(--text3);}
@@ -239,8 +240,22 @@ footer{position:relative;z-index:1;border-top:1px solid var(--border);padding:38
 .mx-tile-l{font-size:9px;letter-spacing:1.4px;text-transform:uppercase;color:var(--text3);margin-bottom:7px;}
 .mx-tile-v{font-family:'Bebas Neue',sans-serif;font-size:30px;letter-spacing:2px;color:var(--text);line-height:1;}
 .mx-tile-v span{color:var(--gold);}
-@media(max-width:900px){#matrix-section{padding:70px 20px;}.matrix-grid{grid-template-columns:1fr;}.mx-cell{border-right:none;min-height:auto}.mx-head{display:none}.mx-cell{display:grid;grid-template-columns:110px 1fr;align-items:center}.mx-cell::before{content:attr(data-label);font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);letter-spacing:1px;text-transform:uppercase}.mx-asset{grid-template-columns:1fr}.mx-asset::before{display:none}.matrix-summary{grid-template-columns:1fr 1fr;}}
-@media(max-width:540px){.matrix-summary{grid-template-columns:1fr;}}
+.mx-card{border:1px solid var(--border);background:linear-gradient(180deg,rgba(16,19,26,.92),rgba(11,13,18,.98));border-radius:14px;padding:15px;box-shadow:0 14px 42px rgba(0,0,0,.22);}
+.mx-card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:13px;}
+.mx-card-id{min-width:0;}
+.mx-card-id .mx-sym{font-size:29px;}
+.mx-card-id .mx-name{max-width:190px;}
+.mx-card-score{text-align:right;}
+.mx-card-score .mx-num{font-size:27px;color:var(--goldl);line-height:1;}
+.mx-card-score .mx-small{margin-top:4px;}
+.mx-card-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0;}
+.mx-chip{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:9px 8px;min-width:0;}
+.mx-chip-l{font-size:8px;letter-spacing:1px;text-transform:uppercase;color:var(--text3);margin-bottom:4px;white-space:nowrap;}
+.mx-chip-v{font-family:'DM Mono',monospace;font-size:13px;color:var(--text);white-space:nowrap;}
+.mx-card-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-top:11px;border-top:1px solid var(--border);}
+.mx-rank{font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);}
+@media(max-width:900px){#matrix-section{padding:70px 20px;}.matrix-head{align-items:flex-start;margin-bottom:20px}.matrix-copy{max-width:100%}.matrix-copy .sec-desc{max-width:none}.matrix-actions{width:100%;display:grid;grid-template-columns:repeat(3,1fr)}.mx-tab{padding:9px 6px}.matrix-wrap{border:none;background:transparent;box-shadow:none;border-radius:0;overflow:visible}.matrix-grid{display:none}.matrix-mobile{display:grid;grid-template-columns:1fr;gap:10px}.matrix-summary{grid-template-columns:1fr 1fr;}.mx-tile{padding:14px}.mx-tile-v{font-size:26px}}
+@media(max-width:540px){#matrix-section{padding:64px 16px}.matrix-summary{grid-template-columns:1fr 1fr;gap:9px}.mx-tile{padding:12px}.mx-tile-v{font-size:23px}.mx-card{padding:14px;border-radius:12px}.mx-card-stats{gap:7px}.mx-chip{padding:8px 7px}.mx-chip-v{font-size:12px}.mx-role{font-size:9px;padding:5px 7px}.mx-card-id .mx-name{max-width:160px}}
 </style>
 </head>
 <body>
@@ -338,6 +353,7 @@ footer{position:relative;z-index:1;border-top:1px solid var(--border);padding:38
     </div>
     <div class="matrix-wrap">
       <div class="matrix-grid" id="matrixGrid"></div>
+      <div class="matrix-mobile" id="matrixMobile"></div>
     </div>
     <div class="matrix-summary" id="matrixSummary"></div>
   </div>
@@ -770,6 +786,7 @@ function setMatrixMode(mode,btn){
 
 function renderMatrix(){
   const grid=document.getElementById('matrixGrid'); if(!grid) return;
+  const mobile=document.getElementById('matrixMobile');
   const rows=matrixRows();
   grid.innerHTML=[
     ['Asset','Conviction','Upside','Risk','Momentum','Role'].map(h=>`<div class="mx-cell mx-head">${h}</div>`).join(''),
@@ -782,6 +799,33 @@ function renderMatrix(){
       <div class="mx-cell" data-label="Role"><span class="mx-role">${r.role}</span></div>
     `).join('')
   ].join('');
+
+  if(mobile){
+    mobile.innerHTML=rows.map((r,i)=>`
+      <div class="mx-card">
+        <div class="mx-card-top">
+          <div class="mx-card-id">
+            <div class="mx-sym">${r.sym}</div>
+            <div class="mx-name">${r.name}</div>
+          </div>
+          <div class="mx-card-score">
+            <div class="mx-num">${r.conviction}</div>
+            <div class="mx-small">Conviction</div>
+          </div>
+        </div>
+        <div class="mx-score"><div class="mx-fill" style="width:${r.conviction}%"></div></div>
+        <div class="mx-card-stats">
+          <div class="mx-chip"><div class="mx-chip-l">Upside</div><div class="mx-chip-v ${r.upside>=0?'up':'dn'}">${r.upside>=0?'+':''}${r.upside.toFixed(1)}%</div></div>
+          <div class="mx-chip"><div class="mx-chip-l">Risk</div><div class="mx-chip-v">${r.risk}</div></div>
+          <div class="mx-chip"><div class="mx-chip-l">Momentum</div><div class="mx-chip-v">${r.momentum}</div></div>
+        </div>
+        <div class="mx-card-foot">
+          <span class="mx-role">${r.role}</span>
+          <span class="mx-rank">#${String(i+1).padStart(2,'0')}</span>
+        </div>
+      </div>
+    `).join('');
+  }
 
   const summary=document.getElementById('matrixSummary');
   if(summary){
