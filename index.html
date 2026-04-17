@@ -299,7 +299,7 @@ footer{position:relative;z-index:1;border-top:1px solid var(--border);padding:38
 <div class="main-section" id="stocks-section">
   <span class="sec-label">Live Market Intelligence</span>
   <h2 class="sec-title">Your Watchlist</h2>
-  <p class="sec-desc">Click any stock card for full AI analysis — technicals, multi-horizon forecasts, risk factors, and personalised advisor guidance. All prices display in CAD; USD quotes use a 1.38 USD/CAD display rate.</p>
+  <p class="sec-desc" id="currencyNote">Click any stock card for full AI analysis — technicals, multi-horizon forecasts, risk factors, and personalised advisor guidance. All prices display in CAD using the latest available USD/CAD rate.</p>
   <div class="ctrl-row">
     <div class="tf-grp">
       <button class="tf on" onclick="setTF('1M',this)">1M</button>
@@ -309,6 +309,7 @@ footer{position:relative;z-index:1;border-top:1px solid var(--border);padding:38
       <button class="tf" onclick="setTF('2Y',this)">2Y</button>
     </div>
     <div class="ctrl-actions">
+      <span class="quota-pill" id="fxPill">FX: USD/CAD --</span>
       <span class="quota-pill" id="quotaPill">Alpha: -- / --</span>
       <button class="ref-btn" id="refBtn" onclick="refreshAll()">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
@@ -442,9 +443,9 @@ const MARKET_REFRESH_HOUR=7;
 const MARKET_REFRESH_MINUTE=45;
 const MARKET_REFRESH_KEY='vvs_market_refresh_day';
 const DISPLAY_CURRENCY='CAD';
-const USD_CAD_RATE=1.38;
+const FALLBACK_USD_CAD_RATE=1.38;
 let demoMode=false;
-let quotes={}, openSym=null, detailChart=null, currentTF='1M', matrixMode='conviction', fetchingAll=false, marketRefreshTimer=null;
+let quotes={}, openSym=null, detailChart=null, currentTF='1M', matrixMode='conviction', usdCadRate=FALLBACK_USD_CAD_RATE, fxMeta={source:'fallback',date:null}, fetchingAll=false, marketRefreshTimer=null;
 
 // ═══════════════════════════════
 // KEYS & INIT
@@ -483,6 +484,33 @@ function timeLabel(){
   return new Date().toLocaleTimeString([], {hour:'numeric',minute:'2-digit'});
 }
 
+async function loadFxRate(){
+  try{
+    const r=await fetch('/api/fx');
+    if(!r.ok) throw new Error('FX unavailable');
+    const fx=await r.json();
+    if(Number.isFinite(Number(fx.rate))){
+      usdCadRate=Number(fx.rate);
+      fxMeta={source:fx.source||'FX feed',date:fx.date||null};
+    }
+  }catch(e){
+    usdCadRate=FALLBACK_USD_CAD_RATE;
+    fxMeta={source:'fallback',date:null};
+  }
+  updateFxDisplay();
+}
+
+function updateFxDisplay(){
+  const label=`USD/CAD ${usdCadRate.toFixed(4)}`;
+  const pill=document.getElementById('fxPill');
+  if(pill) pill.textContent=`FX: ${label}`;
+  const note=document.getElementById('currencyNote');
+  if(note){
+    const source=fxMeta.date?`${fxMeta.source}, ${fxMeta.date}`:fxMeta.source;
+    note.textContent=`Click any stock card for full AI analysis — technicals, multi-horizon forecasts, risk factors, and personalised advisor guidance. All prices display in CAD using ${label} (${source}).`;
+  }
+}
+
 function localDayKey(date=new Date()){
   return date.toLocaleDateString('en-CA');
 }
@@ -516,7 +544,7 @@ function displayValue(v,sym){
   const meta=WATCHLIST.find(s=>s.sym===sym);
   const n=Number(v);
   if(!Number.isFinite(n)) return null;
-  return meta?.cur==='USD'?n*USD_CAD_RATE:n;
+  return meta?.cur==='USD'?n*usdCadRate:n;
 }
 
 function money(v,sym){
@@ -897,7 +925,7 @@ LIVE PRICE DATA DISPLAYED IN CAD:
 - Volume: ${d.vol||'N/A'} | P/E: ${d.pe||'N/A'} | Beta: ${d.beta||'N/A'}
 - 52-Week Range: ${d.w52||'N/A'} | Market Cap: ${d.mktcap||'N/A'}
 - Analyst Consensus Target: ${money(d.analyst,sym)}
-- Native quote currency: ${s.cur}; USD quotes converted at ${USD_CAD_RATE} USD/CAD for display.
+- Native quote currency: ${s.cur}; USD quotes converted at ${usdCadRate.toFixed(4)} USD/CAD for display from ${fxMeta.source}${fxMeta.date?` (${fxMeta.date})`:''}.
 
 AI FORECASTS:
 1M: ${fc['1M']}% | 3M: ${fc['3M']}% | 6M: ${fc['6M']}% | 1Y: ${fc['1Y']}% | 2Y: ${fc['2Y']}%
@@ -1064,8 +1092,9 @@ function addMsg(role,content){
 // ═══════════════════════════════
 // BOOTSTRAP
 // ═══════════════════════════════
-window.addEventListener('load',()=>{
+window.addEventListener('load',async ()=>{
   hideBanner('Local backend connected.');
+  await loadFxRate();
   loadFallback();
   setStatus(true,'Cached baseline · daily live refresh 7:45 AM');
   updateAlphaUsage();

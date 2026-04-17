@@ -28,9 +28,11 @@ const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash-lite';
 const ALPHA_DAILY_LIMIT = Number(process.env.ALPHA_DAILY_LIMIT || 25);
 const QUOTE_TTL_MS = Number(process.env.ALPHA_QUOTE_TTL_MS || 60 * 60 * 1000);
 const HISTORY_TTL_MS = Number(process.env.ALPHA_HISTORY_TTL_MS || 12 * 60 * 60 * 1000);
+const FX_TTL_MS = Number(process.env.FX_TTL_MS || 12 * 60 * 60 * 1000);
 const ALPHA_STATE_PATH = path.join(ROOT, '.alpha-usage.json');
 
 let alphaState = loadAlphaState();
+let fxState = { savedAt: 0, rate: 1.38, date: null, source: 'fallback' };
 
 function loadAlphaState() {
   try {
@@ -131,6 +133,18 @@ async function fetchAlpha(params) {
   return data;
 }
 
+async function fetchUsdCad() {
+  if (Date.now() - fxState.savedAt < FX_TTL_MS) return fxState;
+  const response = await fetch('https://www.bankofcanada.ca/valet/observations/FXUSDCAD/json?recent=1');
+  if (!response.ok) return fxState;
+  const data = await response.json();
+  const observation = data.observations?.[0];
+  const rate = Number.parseFloat(observation?.FXUSDCAD?.v);
+  if (!Number.isFinite(rate)) return fxState;
+  fxState = { savedAt: Date.now(), rate, date: observation.d, source: 'Bank of Canada' };
+  return fxState;
+}
+
 async function handleQuote(reqUrl, res) {
   const symbol = (reqUrl.searchParams.get('symbol') || '').toUpperCase().replace(/[^A-Z0-9.-]/g, '');
   if (!symbol) return sendJson(res, 400, { error: 'Missing symbol' });
@@ -220,6 +234,7 @@ const server = http.createServer(async (req, res) => {
     if (reqUrl.pathname === '/api/quote' && req.method === 'GET') return await handleQuote(reqUrl, res);
     if (reqUrl.pathname === '/api/history' && req.method === 'GET') return await handleHistory(reqUrl, res);
     if (reqUrl.pathname === '/api/gemini' && req.method === 'POST') return await handleGemini(req, res);
+    if (reqUrl.pathname === '/api/fx' && req.method === 'GET') return sendJson(res, 200, await fetchUsdCad());
     if (reqUrl.pathname === '/api/alpha-usage' && req.method === 'GET') return sendJson(res, 200, alphaUsage());
     if (reqUrl.pathname === '/api/health') {
       requireKeys();

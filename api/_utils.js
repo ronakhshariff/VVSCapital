@@ -19,6 +19,7 @@ function fmtVol(n) {
 const ALPHA_DAILY_LIMIT = Number(process.env.ALPHA_DAILY_LIMIT || 25);
 const QUOTE_TTL_MS = Number(process.env.ALPHA_QUOTE_TTL_MS || 60 * 60 * 1000);
 const HISTORY_TTL_MS = Number(process.env.ALPHA_HISTORY_TTL_MS || 12 * 60 * 60 * 1000);
+const FX_TTL_MS = Number(process.env.FX_TTL_MS || 12 * 60 * 60 * 1000);
 
 const state = globalThis.__vvsAlphaState || {
   day: null,
@@ -26,6 +27,14 @@ const state = globalThis.__vvsAlphaState || {
   cache: new Map(),
 };
 globalThis.__vvsAlphaState = state;
+
+const fxState = globalThis.__vvsFxState || {
+  savedAt: 0,
+  rate: 1.38,
+  date: null,
+  source: 'fallback',
+};
+globalThis.__vvsFxState = fxState;
 
 function dayKey() {
   return new Date().toISOString().slice(0, 10);
@@ -85,4 +94,19 @@ async function fetchAlpha(params) {
   return data;
 }
 
-module.exports = { alphaUsage, cleanSymbol, fetchAlpha, fmtVol, json };
+async function usdCadRate() {
+  if (Date.now() - fxState.savedAt < FX_TTL_MS) return fxState;
+  const response = await fetch('https://www.bankofcanada.ca/valet/observations/FXUSDCAD/json?recent=1');
+  if (!response.ok) return fxState;
+  const data = await response.json();
+  const observation = data.observations?.[0];
+  const rate = Number.parseFloat(observation?.FXUSDCAD?.v);
+  if (!Number.isFinite(rate)) return fxState;
+  fxState.savedAt = Date.now();
+  fxState.rate = rate;
+  fxState.date = observation.d;
+  fxState.source = 'Bank of Canada';
+  return fxState;
+}
+
+module.exports = { alphaUsage, cleanSymbol, fetchAlpha, fmtVol, json, usdCadRate };
