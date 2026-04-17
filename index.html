@@ -297,7 +297,7 @@ footer{position:relative;z-index:1;border-top:1px solid var(--border);padding:38
         <span class="chat-ttxt">VVS Oracle — AI Advisor · Powered by Gemini</span>
       </div>
       <div class="chat-msgs" id="chatMsgs">
-        <div class="cmsg ai"><div class="bubble">Welcome. I'm the VVS Oracle — your personal AI finance advisor. I have live context on your full watchlist: XEQT, AAPL, MSFT, VTI, VOO, NFLX, and INTC.<br><br>Ask me about forecasts, risk, entry points, portfolio allocation, or any market condition. What's on your mind?</div></div>
+        <div class="cmsg ai"><div class="bubble">Welcome. I'm the VVS Oracle — your personal AI finance advisor. I have live context on your full expanded watchlist across ETFs, indexes, AI leaders, mega-cap tech, consumer names, and Canadian income funds.<br><br>Ask me about forecasts, risk, entry points, portfolio allocation, or any market condition. What's on your mind?</div></div>
       </div>
       <div class="chat-foot">
         <input class="chat-inp" id="chatInp" placeholder="e.g. Should I buy MSFT now? Compare VTI vs VOO. What's my highest conviction pick?" />
@@ -317,36 +317,69 @@ footer{position:relative;z-index:1;border-top:1px solid var(--border);padding:38
 // DATA
 // ═══════════════════════════════
 const WATCHLIST = [
-  {sym:'XEQT',name:'iShares Core Equity ETF',        type:'ETF',  cur:'CAD'},
-  {sym:'AAPL',name:'Apple Inc.',                      type:'Tech', cur:'USD'},
-  {sym:'MSFT',name:'Microsoft Corporation',           type:'Tech', cur:'USD'},
-  {sym:'VTI', name:'Vanguard Total Stock Market ETF', type:'ETF',  cur:'USD'},
-  {sym:'VOO', name:'Vanguard S&P 500 ETF',            type:'ETF',  cur:'USD'},
-  {sym:'NFLX',name:'Netflix Inc.',                    type:'Media',cur:'USD'},
-  {sym:'INTC',name:'Intel Corporation',               type:'Tech', cur:'USD'},
+  {sym:'XEQT',name:'iShares Core Equity ETF',              type:'ETF',     cur:'CAD', api:'XEQT.TRT'},
+  {sym:'SPY', name:'S&P 500 Index ETF',                    type:'Index',   cur:'USD'},
+  {sym:'AAPL',name:'Apple Inc.',                            type:'Tech',    cur:'USD'},
+  {sym:'MSFT',name:'Microsoft Corporation',                 type:'Tech',    cur:'USD'},
+  {sym:'GOOG',name:'Alphabet Inc.',                         type:'Tech',    cur:'USD'},
+  {sym:'META',name:'Meta Platforms Inc.',                   type:'Tech',    cur:'USD'},
+  {sym:'NVDA',name:'NVIDIA Corporation',                    type:'AI',      cur:'USD'},
+  {sym:'PLTR',name:'Palantir Technologies Inc.',            type:'AI',      cur:'USD'},
+  {sym:'VTI', name:'Vanguard Total Stock Market ETF',       type:'ETF',     cur:'USD'},
+  {sym:'VOO', name:'Vanguard S&P 500 ETF',                  type:'ETF',     cur:'USD'},
+  {sym:'QQQ', name:'Invesco QQQ Trust',                     type:'ETF',     cur:'USD'},
+  {sym:'AVUV',name:'Avantis U.S. Small Cap Value ETF',      type:'ETF',     cur:'USD'},
+  {sym:'XBB', name:'iShares Canadian Universe Bond ETF',    type:'ETF',     cur:'CAD', api:'XBB.TRT'},
+  {sym:'XEI', name:'iShares S&P/TSX High Dividend ETF',     type:'ETF',     cur:'CAD', api:'XEI.TRT'},
+  {sym:'XEQ', name:'XEQ Canadian Equity ETF',               type:'ETF',     cur:'CAD', api:'XEQ.TRT'},
+  {sym:'NFLX',name:'Netflix Inc.',                          type:'Media',   cur:'USD'},
+  {sym:'NKE', name:'Nike Inc.',                             type:'Apparel', cur:'USD'},
+  {sym:'INTC',name:'Intel Corporation',                     type:'Tech',    cur:'USD'},
 ];
 
 const DEMO_QUOTES = {
   XEQT:{price:29.84,change:0.62, pct:2.12,  open:29.22,high:30.10,low:29.18,vol:'1.2M', pe:'N/A',beta:'0.92',w52:'24.10 – 31.40',mktcap:'4.8B', analyst:'31.50',pos:true},
+  SPY: {price:612.38,change:4.86,pct:0.80,  open:607.90,high:613.40,low:606.88,vol:'55.9M',pe:'24.5',beta:'1.00',w52:'492.20 – 625.10',mktcap:'620B', analyst:'650.00',pos:true},
   AAPL:{price:210.38,change:3.14,pct:1.51,  open:207.24,high:211.90,low:206.80,vol:'68.4M',pe:'33.2',beta:'1.24',w52:'163.92 – 237.23',mktcap:'3.18T',analyst:'228.00',pos:true},
   MSFT:{price:418.52,change:5.77,pct:1.40,  open:412.75,high:420.88,low:411.60,vol:'24.1M',pe:'36.4',beta:'0.89',w52:'344.79 – 468.35',mktcap:'3.11T',analyst:'470.00',pos:true},
+  GOOG:{price:198.62,change:2.81,pct:1.44,  open:195.95,high:199.40,low:195.18,vol:'22.6M',pe:'27.8',beta:'1.05',w52:'132.90 – 205.70',mktcap:'2.42T',analyst:'220.00',pos:true},
+  META:{price:634.18,change:7.92,pct:1.26,  open:626.10,high:638.40,low:624.90,vol:'14.8M',pe:'29.6',beta:'1.18',w52:'414.50 – 659.20',mktcap:'1.61T',analyst:'700.00',pos:true},
+  NVDA:{price:141.72,change:3.06,pct:2.21,  open:138.60,high:143.20,low:137.94,vol:'185.4M',pe:'46.2',beta:'1.72',w52:'75.61 – 153.13',mktcap:'3.48T',analyst:'165.00',pos:true},
+  PLTR:{price:96.45,change:1.88,pct:1.99,   open:94.70,high:98.10,low:93.85,vol:'68.7M',pe:'N/A',beta:'2.12',w52:'20.33 – 125.41',mktcap:'219B',analyst:'88.00',pos:true},
   VTI: {price:248.91,change:2.93,pct:1.19,  open:245.98,high:249.70,low:244.80,vol:'3.4M', pe:'23.4',beta:'1.00',w52:'199.82 – 264.77',mktcap:'360B', analyst:'268.00',pos:true},
   VOO: {price:526.74,change:6.14,pct:1.18,  open:520.60,high:528.10,low:519.40,vol:'4.1M', pe:'24.1',beta:'1.00',w52:'419.97 – 549.59',mktcap:'530B', analyst:'570.00',pos:true},
+  QQQ: {price:532.86,change:7.11,pct:1.35,  open:525.40,high:535.20,low:523.96,vol:'42.6M',pe:'31.7',beta:'1.18',w52:'390.12 – 552.74',mktcap:'300B', analyst:'575.00',pos:true},
+  AVUV:{price:101.38,change:0.84,pct:0.84,  open:100.52,high:102.10,low:99.94,vol:'1.1M', pe:'12.8',beta:'1.21',w52:'73.84 – 105.60',mktcap:'15.4B', analyst:'112.00',pos:true},
+  XBB: {price:27.12,change:0.05,pct:0.18,   open:27.07,high:27.18,low:27.02,vol:'620K', pe:'N/A',beta:'0.18',w52:'25.82 – 28.31',mktcap:'5.9B', analyst:'28.00',pos:true},
+  XEI: {price:27.94,change:0.16,pct:0.58,   open:27.78,high:28.02,low:27.70,vol:'910K', pe:'13.6',beta:'0.84',w52:'23.88 – 29.14',mktcap:'2.5B', analyst:'30.00',pos:true},
+  XEQ: {price:32.40,change:0.21,pct:0.65,   open:32.16,high:32.48,low:32.05,vol:'210K', pe:'18.9',beta:'0.96',w52:'26.80 – 33.10',mktcap:'1.1B', analyst:'35.00',pos:true},
   NFLX:{price:992.47,change:-8.33,pct:-0.83,open:1000.80,high:1004.20,low:988.40,vol:'3.8M',pe:'52.8',beta:'1.48',w52:'491.46 – 1064.50',mktcap:'423B',analyst:'1050.00',pos:false},
+  NKE: {price:72.68,change:-0.42,pct:-0.57, open:73.10,high:73.66,low:72.05,vol:'11.9M',pe:'22.4',beta:'1.11',w52:'52.28 – 98.04',mktcap:'108B', analyst:'82.00',pos:false},
   INTC:{price:20.43,change:-0.17,pct:-0.82, open:20.60,high:20.90,low:20.10,vol:'42.3M',pe:'N/A',beta:'1.03',w52:'18.51 – 43.63',  mktcap:'87.2B',analyst:'26.00', pos:false},
 };
 
 const FORECASTS = {
   XEQT:{'1M':1.8,'3M':3.2,'6M':5.1,'1Y':9.6,'2Y':19.4},
+  SPY: {'1M':1.2,'3M':3.4,'6M':6.3,'1Y':12.1,'2Y':24.8},
   AAPL:{'1M':2.1,'3M':5.0,'6M':9.3,'1Y':18.7,'2Y':34.2},
   MSFT:{'1M':1.6,'3M':4.7,'6M':8.8,'1Y':21.3,'2Y':42.6},
+  GOOG:{'1M':1.9,'3M':5.4,'6M':10.2,'1Y':19.8,'2Y':35.4},
+  META:{'1M':1.4,'3M':5.9,'6M':11.7,'1Y':23.6,'2Y':39.1},
+  NVDA:{'1M':2.8,'3M':8.6,'6M':16.4,'1Y':31.8,'2Y':55.0},
+  PLTR:{'1M':-0.8,'3M':6.5,'6M':14.2,'1Y':29.6,'2Y':58.4},
   VTI: {'1M':1.2,'3M':3.4,'6M':6.0,'1Y':11.8,'2Y':24.5},
   VOO: {'1M':1.3,'3M':3.6,'6M':6.4,'1Y':12.3,'2Y':25.1},
+  QQQ: {'1M':1.7,'3M':5.8,'6M':11.6,'1Y':22.7,'2Y':41.5},
+  AVUV:{'1M':0.7,'3M':4.3,'6M':8.9,'1Y':18.4,'2Y':36.8},
+  XBB: {'1M':0.4,'3M':1.3,'6M':2.6,'1Y':5.1,'2Y':9.8},
+  XEI: {'1M':0.9,'3M':2.8,'6M':5.4,'1Y':9.2,'2Y':17.3},
+  XEQ: {'1M':1.0,'3M':3.1,'6M':5.9,'1Y':10.8,'2Y':21.7},
   NFLX:{'1M':-1.4,'3M':2.8,'6M':8.1,'1Y':22.4,'2Y':38.6},
+  NKE: {'1M':-1.0,'3M':1.7,'6M':5.8,'1Y':13.6,'2Y':25.4},
   INTC:{'1M':-2.1,'3M':-0.4,'6M':4.2,'1Y':14.8,'2Y':31.7},
 };
 
-const CONFIDENCE = {XEQT:78,AAPL:82,MSFT:87,VTI:81,VOO:83,NFLX:71,INTC:58};
+const CONFIDENCE = {XEQT:78,SPY:84,AAPL:82,MSFT:87,GOOG:80,META:79,NVDA:76,PLTR:62,VTI:81,VOO:83,QQQ:78,AVUV:73,XBB:72,XEI:74,XEQ:70,NFLX:71,NKE:61,INTC:58};
 
 const AUTO_REFRESH_MS=15*60*1000;
 let demoMode=false;
@@ -384,13 +417,17 @@ function timeLabel(){
   return new Date().toLocaleTimeString([], {hour:'numeric',minute:'2-digit'});
 }
 
+function apiSymbol(sym){
+  return WATCHLIST.find(s=>s.sym===sym)?.api||sym;
+}
+
 // ═══════════════════════════════
 // ALPHA VANTAGE
 // ═══════════════════════════════
 async function fetchQuote(sym){
   if(demoMode) return DEMO_QUOTES[sym]||null;
   try{
-    const r=await fetch(`/api/quote?symbol=${encodeURIComponent(sym)}`);
+    const r=await fetch(`/api/quote?symbol=${encodeURIComponent(apiSymbol(sym))}`);
     if(!r.ok) return DEMO_QUOTES[sym];
     return await r.json();
   }catch(e){return DEMO_QUOTES[sym];}
@@ -399,7 +436,7 @@ async function fetchQuote(sym){
 async function fetchHistory(sym){
   if(demoMode) return fakeHistory(sym);
   try{
-    const r=await fetch(`/api/history?symbol=${encodeURIComponent(sym)}`);
+    const r=await fetch(`/api/history?symbol=${encodeURIComponent(apiSymbol(sym))}`);
     if(!r.ok) return fakeHistory(sym);
     return await r.json();
   }catch(e){return fakeHistory(sym);}
@@ -727,7 +764,10 @@ function renderFallback(sym,s,d,fc){
 <div class="ai-sec"><div class="ai-sec-t" style="color:var(--red)">◉ RISK FACTORS</div><p class="ai-txt">Concentration in the top 10 names (~35% of fund) creates hidden single-stock risk. A US earnings recession or significant Fed policy error could cause a 20–30% drawdown. No small/mid-cap or international upside.</p></div>
 <div class="ai-sec"><div class="ai-sec-t" style="color:var(--green)">◇ ADVISOR RECOMMENDATION</div><p class="ai-txt">VOO is a buy at any price for a 5+ year horizon. Buy now and set up automatic contributions. An 15–35% portfolio allocation is appropriate depending on risk appetite. The compounding math over 10–20 years is overwhelming — this is generational wealth-building, not trading.</p></div>`,
   };
-  body.innerHTML=INSIGHTS[sym]||`<div class="ai-sec"><div class="ai-sec-t" style="color:var(--blue)">◈ ANALYSIS</div><p class="ai-txt">Add your Gemini API key to get full AI-powered analysis including market outlook, forecast rationale, risk factors, and personalised advisor guidance for ${sym}.</p></div>`;
+  body.innerHTML=INSIGHTS[sym]||`<div class="ai-sec"><div class="ai-sec-t" style="color:var(--blue)">◈ MARKET OUTLOOK</div><p class="ai-txt">${sym} is being monitored as a ${s.type} exposure inside the VVS watchlist. Today's ${d.pct.toFixed(2)}% move gives the position a ${pos?'constructive':'cautious'} near-term tape, while the current price of $${d.price.toFixed(2)} becomes the anchor for the forecast path. Volume, trend persistence, and sector leadership should decide whether this turns into a high-conviction entry or a patience setup.</p></div>
+<div class="ai-sec"><div class="ai-sec-t" style="color:var(--gold)">▲ FORECAST RATIONALE</div><p class="ai-txt">The model assigns a ${fc6}% 6-month forecast and a ${fc2}% 2-year forecast based on the asset's category, current momentum, and expected earnings or income durability. Upside depends on broad market liquidity, rate expectations, and whether ${sym} can maintain relative strength versus comparable holdings. Analyst or fund targets should be treated as directional context rather than a hard price objective.</p></div>
+<div class="ai-sec"><div class="ai-sec-t" style="color:var(--red)">◉ RISK FACTORS</div><p class="ai-txt">The main risks are valuation compression, macro shocks, and a loss of technical leadership against higher-conviction alternatives. For ETFs, concentration and factor exposure matter; for single stocks, execution and earnings revisions matter more. A break below recent support should reduce position size until momentum repairs.</p></div>
+<div class="ai-sec"><div class="ai-sec-t" style="color:var(--green)">◇ ADVISOR RECOMMENDATION</div><p class="ai-txt">${sym} belongs on the active watchlist, but sizing should match conviction. Use staggered entries, keep single-stock positions smaller than core ETFs, and add only when price action confirms the thesis. For now, treat $${d.price.toFixed(2)} as the reference level and demand better risk/reward before oversizing.</p></div>`;
 }
 
 // ═══════════════════════════════
@@ -788,9 +828,9 @@ Rules: Be direct, sharp, and conversational. Give specific numbers and price lev
   }catch(e){
     const u=text.toUpperCase();
     let rep='Connection error. Start the localhost server to unlock full AI chat with real-time market context.';
-    if(u.includes('MSFT')) rep='MSFT is the top pick: 87% AI confidence, 42.6% 2Y forecast, beta 0.89. Azure + Copilot AI thesis is multi-year. Strong buy — 8–12% portfolio allocation.';
-    else if(u.includes('BEST')||u.includes('TOP')) rep='Ranked by AI confidence: MSFT(87%)>VOO(83%)>AAPL(82%)>VTI(81%)>XEQT(78%)>NFLX(71%)>INTC(58%). Best risk-adjusted: MSFT and VOO. Best for Canadians: XEQT as core.';
-    else if(u.includes('RISK')||u.includes('SAFE')) rep='Lowest risk: VTI/VOO (beta 1.0), MSFT (beta 0.89), XEQT (beta 0.92). Most volatile: NFLX (beta 1.48), INTC (beta 1.03). For conservative positioning, lead with ETFs.';
+    if(u.includes('MSFT')) rep='MSFT remains the highest-confidence single-stock compounder: 87% AI confidence, 42.6% 2Y forecast, beta 0.89. Azure + Copilot is a multi-year thesis — buy core exposure and add on pullbacks.';
+    else if(u.includes('BEST')||u.includes('TOP')) rep='Ranked by AI confidence: MSFT(87%)>SPY(84%)>VOO(83%)>AAPL(82%)>VTI(81%)>GOOG(80%)>META(79%)>QQQ/XEQT(78%). Highest upside: PLTR and NVDA. Best risk-adjusted core: MSFT, VOO, SPY, VTI.';
+    else if(u.includes('RISK')||u.includes('SAFE')) rep='Lowest risk: XBB for bonds, then VOO/SPY/VTI for broad US equity, XEQT for global Canadian core, and XEI for dividend income. Highest volatility: PLTR, NVDA, NFLX, and INTC. Keep those sized smaller.';
     typing.querySelector('.bubble').innerHTML=rep;
   }
   msgs.scrollTop=msgs.scrollHeight;
