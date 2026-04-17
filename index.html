@@ -103,6 +103,9 @@ nav{position:fixed;top:0;left:0;right:0;z-index:500;display:flex;align-items:cen
 .ctrl-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;flex-wrap:wrap;gap:14px;}
 .ctrl-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
 .quota-pill{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.4px;color:var(--text2);border:1px solid var(--border);background:var(--bg2);padding:7px 12px;border-radius:8px;white-space:nowrap;}
+.currency-toggle{display:flex;gap:3px;background:var(--bg2);border:1px solid var(--border);border-radius:9px;padding:3px;}
+.cur-btn{background:none;border:none;color:var(--text2);font-family:'DM Mono',monospace;font-size:10px;padding:5px 10px;border-radius:7px;cursor:pointer;transition:all .2s;}
+.cur-btn.on{background:var(--gold);color:#050608;}
 .tf-grp{display:flex;gap:3px;background:var(--bg2);border:1px solid var(--border);border-radius:9px;padding:3px;}
 .tf{background:none;border:none;color:var(--text2);font-family:'DM Mono',monospace;font-size:11px;padding:5px 13px;border-radius:7px;cursor:pointer;transition:all .2s;letter-spacing:.5px;}
 .tf.on{background:var(--gold);color:#000;}
@@ -314,7 +317,7 @@ footer{position:relative;z-index:1;border-top:1px solid var(--border);padding:38
 <div class="main-section" id="stocks-section">
   <span class="sec-label">Live Market Intelligence</span>
   <h2 class="sec-title">Your Watchlist</h2>
-  <p class="sec-desc" id="currencyNote">Click any stock card for full AI analysis — technicals, multi-horizon forecasts, risk factors, and personalised advisor guidance. All prices display in CAD using the latest available USD/CAD rate.</p>
+  <p class="sec-desc" id="currencyNote">Click any stock card for full AI analysis — technicals, multi-horizon forecasts, risk factors, and personalised advisor guidance. Prices display in USD by default; CAD is available using the latest USD/CAD rate.</p>
   <div class="ctrl-row">
     <div class="tf-grp">
       <button class="tf on" onclick="setTF('1M',this)">1M</button>
@@ -324,6 +327,10 @@ footer{position:relative;z-index:1;border-top:1px solid var(--border);padding:38
       <button class="tf" onclick="setTF('2Y',this)">2Y</button>
     </div>
     <div class="ctrl-actions">
+      <div class="currency-toggle">
+        <button class="cur-btn on" id="curUsd" onclick="setCurrency('USD',this)">USD</button>
+        <button class="cur-btn" id="curCad" onclick="setCurrency('CAD',this)">CAD</button>
+      </div>
       <span class="quota-pill" id="fxPill">FX: USD/CAD --</span>
       <span class="quota-pill" id="quotaPill">Alpha: -- / --</span>
       <button class="ref-btn" id="refBtn" onclick="refreshAll()">
@@ -458,10 +465,11 @@ const CONFIDENCE = {XEQT:78,SPY:84,AAPL:82,MSFT:87,GOOG:80,META:79,NVDA:76,PLTR:
 const MARKET_REFRESH_HOUR=7;
 const MARKET_REFRESH_MINUTE=45;
 const MARKET_REFRESH_KEY='vvs_market_refresh_day';
-const DISPLAY_CURRENCY='CAD';
+const DEFAULT_DISPLAY_CURRENCY='USD';
+const CURRENCY_KEY='vvs_display_currency';
 const FALLBACK_USD_CAD_RATE=1.38;
 let demoMode=false;
-let quotes={}, openSym=null, detailChart=null, currentTF='1M', matrixMode='conviction', usdCadRate=FALLBACK_USD_CAD_RATE, fxMeta={source:'fallback',date:null}, fetchingAll=false, marketRefreshTimer=null;
+let quotes={}, openSym=null, detailChart=null, currentTF='1M', matrixMode='conviction', displayCurrency=localStorage.getItem(CURRENCY_KEY)||DEFAULT_DISPLAY_CURRENCY, usdCadRate=FALLBACK_USD_CAD_RATE, fxMeta={source:'fallback',date:null}, fetchingAll=false, marketRefreshTimer=null;
 
 // ═══════════════════════════════
 // KEYS & INIT
@@ -523,8 +531,10 @@ function updateFxDisplay(){
   const note=document.getElementById('currencyNote');
   if(note){
     const source=fxMeta.date?`${fxMeta.source}, ${fxMeta.date}`:fxMeta.source;
-    note.textContent=`Click any stock card for full AI analysis — technicals, multi-horizon forecasts, risk factors, and personalised advisor guidance. All prices display in CAD using ${label} (${source}).`;
+    note.textContent=`Click any stock card for full AI analysis — technicals, multi-horizon forecasts, risk factors, and personalised advisor guidance. Prices display in ${displayCurrency}; CAD mode uses ${label} (${source}).`;
   }
+  document.querySelectorAll('.cur-btn').forEach(b=>b.classList.remove('on'));
+  document.getElementById(displayCurrency==='CAD'?'curCad':'curUsd')?.classList.add('on');
 }
 
 function localDayKey(date=new Date()){
@@ -560,21 +570,36 @@ function displayValue(v,sym){
   const meta=WATCHLIST.find(s=>s.sym===sym);
   const n=Number(v);
   if(!Number.isFinite(n)) return null;
-  return meta?.cur==='USD'?n*usdCadRate:n;
+  if(displayCurrency==='CAD') return meta?.cur==='USD'?n*usdCadRate:n;
+  return meta?.cur==='CAD'?n/usdCadRate:n;
 }
 
 function money(v,sym){
   const converted=displayValue(v,sym);
-  return converted===null?'—':`C$${converted.toFixed(2)}`;
+  const prefix=displayCurrency==='CAD'?'C$':'US$';
+  return converted===null?'—':`${prefix}${converted.toFixed(2)}`;
 }
 
 function moneyRaw(v){
   const n=Number(v);
-  return Number.isFinite(n)?`C$${n.toFixed(2)}`:'—';
+  const prefix=displayCurrency==='CAD'?'C$':'US$';
+  return Number.isFinite(n)?`${prefix}${n.toFixed(2)}`:'—';
+}
+
+function currencyPrefix(){
+  return displayCurrency==='CAD'?'C$':'US$';
 }
 
 function changeMoney(d,sym){
   return moneyRaw(Math.abs(displayValue(d?.change||0,sym)||0));
+}
+
+function setCurrency(cur,btn){
+  displayCurrency=cur;
+  localStorage.setItem(CURRENCY_KEY,cur);
+  updateFxDisplay();
+  renderAll(); renderMatrix(); buildTicker();
+  if(openSym) openDetail(openSym);
 }
 
 // ═══════════════════════════════
@@ -622,7 +647,7 @@ async function fetchAll(opts={}){
   setStatus(false,'Fetching live prices...');
   if(showSkeleton) renderSkeletons();
   await Promise.all(WATCHLIST.map(async s=>{const q=await fetchQuote(s.sym);if(q)quotes[s.sym]=q;}));
-  renderAll(); renderMatrix(); buildTicker(); setStatus(true,`Live Connected · CAD · Updated ${timeLabel()}`);
+  renderAll(); renderMatrix(); buildTicker(); setStatus(true,`Live Connected · ${displayCurrency} · Updated ${timeLabel()}`);
   updateAlphaUsage();
   fetchingAll=false;
 }
@@ -854,7 +879,7 @@ async function openDetail(sym){
     <div class="dp-hdr">
       <div>
         <div class="dp-sym"><span>${sym}</span> ${s.name}</div>
-        <div class="dp-meta">${s.type} · Displayed in CAD · Native ${s.cur} · AI Confidence ${conf}% · ${demoMode?'Demo Data':'Live Data'}</div>
+        <div class="dp-meta">${s.type} · Displayed in ${displayCurrency} · Native ${s.cur} · AI Confidence ${conf}% · ${demoMode?'Demo Data':'Live Data'}</div>
       </div>
       <button class="dp-close" onclick="closeDetail()">✕ Close</button>
     </div>
@@ -938,7 +963,7 @@ async function buildDetailChart(sym,d){
           callbacks:{label:c=>` ${moneyRaw(c.raw)}`}}},
       scales:{
         x:{grid:{color:'rgba(255,255,255,0.03)'},ticks:{color:'#3a3a3f',font:{family:'DM Mono',size:9},maxTicksLimit:12}},
-        y:{grid:{color:'rgba(255,255,255,0.03)'},ticks:{color:'#3a3a3f',font:{family:'DM Mono',size:9},callback:v=>`C$${v.toFixed(0)}`}}
+        y:{grid:{color:'rgba(255,255,255,0.03)'},ticks:{color:'#3a3a3f',font:{family:'DM Mono',size:9},callback:v=>`${currencyPrefix()}${v.toFixed(0)}`}}
       }}
   });
 }
@@ -962,14 +987,14 @@ async function runAI(sym,s,d,fc,conf){
   const prompt=`You are the VVS Oracle, an elite AI finance advisor for VVS Capital. Deliver sharp, institutional-grade analysis.
 
 STOCK: ${sym} — ${s.name} (${s.type}, ${s.cur})
-LIVE PRICE DATA DISPLAYED IN CAD:
+LIVE PRICE DATA DISPLAYED IN ${displayCurrency}:
 - Price: ${money(d.price,sym)}
 - Today: ${d.pos?'+':''}${d.pct.toFixed(2)}% (${d.pos?'+':'-'}${changeMoney(d,sym)})
 - Open/High/Low: ${money(d.open,sym)} / ${money(d.high,sym)} / ${money(d.low,sym)}
 - Volume: ${d.vol||'N/A'} | P/E: ${d.pe||'N/A'} | Beta: ${d.beta||'N/A'}
 - 52-Week Range: ${d.w52||'N/A'} | Market Cap: ${d.mktcap||'N/A'}
 - Analyst Consensus Target: ${money(d.analyst,sym)}
-- Native quote currency: ${s.cur}; USD quotes converted at ${usdCadRate.toFixed(4)} USD/CAD for display from ${fxMeta.source}${fxMeta.date?` (${fxMeta.date})`:''}.
+- Native quote currency: ${s.cur}; FX conversions use ${usdCadRate.toFixed(4)} USD/CAD from ${fxMeta.source}${fxMeta.date?` (${fxMeta.date})`:''}.
 
 AI FORECASTS:
 1M: ${fc['1M']}% | 3M: ${fc['3M']}% | 6M: ${fc['6M']}% | 1Y: ${fc['1Y']}% | 2Y: ${fc['2Y']}%
@@ -1053,10 +1078,10 @@ function renderFallback(sym,s,d,fc){
 <div class="ai-sec"><div class="ai-sec-t" style="color:var(--red)">◉ RISK FACTORS</div><p class="ai-txt">Concentration in the top 10 names (~35% of fund) creates hidden single-stock risk. A US earnings recession or significant Fed policy error could cause a 20–30% drawdown. No small/mid-cap or international upside.</p></div>
 <div class="ai-sec"><div class="ai-sec-t" style="color:var(--green)">◇ ADVISOR RECOMMENDATION</div><p class="ai-txt">VOO is a buy at any price for a 5+ year horizon. Buy now and set up automatic contributions. An 15–35% portfolio allocation is appropriate depending on risk appetite. The compounding math over 10–20 years is overwhelming — this is generational wealth-building, not trading.</p></div>`,
   };
-  body.innerHTML=INSIGHTS[sym]||`<div class="ai-sec"><div class="ai-sec-t" style="color:var(--blue)">◈ MARKET OUTLOOK</div><p class="ai-txt">${sym} is being monitored as a ${s.type} exposure inside the VVS watchlist. Today's ${d.pct.toFixed(2)}% move gives the position a ${pos?'constructive':'cautious'} near-term tape, while the current CAD display price of ${money(d.price,sym)} becomes the anchor for the forecast path. Volume, trend persistence, and sector leadership should decide whether this turns into a high-conviction entry or a patience setup.</p></div>
+  body.innerHTML=INSIGHTS[sym]||`<div class="ai-sec"><div class="ai-sec-t" style="color:var(--blue)">◈ MARKET OUTLOOK</div><p class="ai-txt">${sym} is being monitored as a ${s.type} exposure inside the VVS watchlist. Today's ${d.pct.toFixed(2)}% move gives the position a ${pos?'constructive':'cautious'} near-term tape, while the current ${displayCurrency} display price of ${money(d.price,sym)} becomes the anchor for the forecast path. Volume, trend persistence, and sector leadership should decide whether this turns into a high-conviction entry or a patience setup.</p></div>
 <div class="ai-sec"><div class="ai-sec-t" style="color:var(--gold)">▲ FORECAST RATIONALE</div><p class="ai-txt">The model assigns a ${fc6}% 6-month forecast and a ${fc2}% 2-year forecast based on the asset's category, current momentum, and expected earnings or income durability. Upside depends on broad market liquidity, rate expectations, and whether ${sym} can maintain relative strength versus comparable holdings. Analyst or fund targets should be treated as directional context rather than a hard price objective.</p></div>
 <div class="ai-sec"><div class="ai-sec-t" style="color:var(--red)">◉ RISK FACTORS</div><p class="ai-txt">The main risks are valuation compression, macro shocks, and a loss of technical leadership against higher-conviction alternatives. For ETFs, concentration and factor exposure matter; for single stocks, execution and earnings revisions matter more. A break below recent support should reduce position size until momentum repairs.</p></div>
-<div class="ai-sec"><div class="ai-sec-t" style="color:var(--green)">◇ ADVISOR RECOMMENDATION</div><p class="ai-txt">${sym} belongs on the active watchlist, but sizing should match conviction. Use staggered entries, keep single-stock positions smaller than core ETFs, and add only when price action confirms the thesis. For now, treat ${money(d.price,sym)} as the CAD reference level and demand better risk/reward before oversizing.</p></div>`;
+<div class="ai-sec"><div class="ai-sec-t" style="color:var(--green)">◇ ADVISOR RECOMMENDATION</div><p class="ai-txt">${sym} belongs on the active watchlist, but sizing should match conviction. Use staggered entries, keep single-stock positions smaller than core ETFs, and add only when price action confirms the thesis. For now, treat ${money(d.price,sym)} as the ${displayCurrency} reference level and demand better risk/reward before oversizing.</p></div>`;
 }
 
 // ═══════════════════════════════
@@ -1102,12 +1127,12 @@ async function sendChat(){
   const ctx=WATCHLIST.map(s=>{
     const d=quotes[s.sym]; const fc=FORECASTS[s.sym];
     if(!d) return`${s.sym}: no data`;
-    return`${s.sym}(${s.type}) ${money(d.price,s.sym)} CAD today:${d.pct.toFixed(2)}% 6M:${fc['6M']}% 2Y:${fc['2Y']}% beta:${d.beta} PE:${d.pe} analyst:${money(d.analyst,s.sym)}`;
+    return`${s.sym}(${s.type}) ${money(d.price,s.sym)} ${displayCurrency} today:${d.pct.toFixed(2)}% 6M:${fc['6M']}% 2Y:${fc['2Y']}% beta:${d.beta} PE:${d.pe} analyst:${money(d.analyst,s.sym)}`;
   }).join(' | ');
 
   const sys=`You are the VVS Oracle, an elite AI finance advisor for VVS Capital. You advise a motivated retail investor who goes by VVS.
 
-LIVE WATCHLIST DISPLAYED IN CAD: ${ctx}
+LIVE WATCHLIST DISPLAYED IN ${displayCurrency}: ${ctx}
 
 Rules: Be direct, sharp, and conversational. Give specific numbers and price levels. Reference actual watchlist data. Keep responses under 180 words unless deep detail is requested. End with one clear actionable takeaway. You may note this isn't financial advice once if giving specific buy/sell calls — never repeat it.`;
 
