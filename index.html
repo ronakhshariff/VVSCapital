@@ -299,7 +299,7 @@ footer{position:relative;z-index:1;border-top:1px solid var(--border);padding:38
 <div class="main-section" id="stocks-section">
   <span class="sec-label">Live Market Intelligence</span>
   <h2 class="sec-title">Your Watchlist</h2>
-  <p class="sec-desc">Click any stock card for full AI analysis — technicals, multi-horizon forecasts, risk factors, and personalised advisor guidance.</p>
+  <p class="sec-desc">Click any stock card for full AI analysis — technicals, multi-horizon forecasts, risk factors, and personalised advisor guidance. All prices display in CAD; USD quotes use a 1.38 USD/CAD display rate.</p>
   <div class="ctrl-row">
     <div class="tf-grp">
       <button class="tf on" onclick="setTF('1M',this)">1M</button>
@@ -441,6 +441,8 @@ const CONFIDENCE = {XEQT:78,SPY:84,AAPL:82,MSFT:87,GOOG:80,META:79,NVDA:76,PLTR:
 const MARKET_REFRESH_HOUR=7;
 const MARKET_REFRESH_MINUTE=45;
 const MARKET_REFRESH_KEY='vvs_market_refresh_day';
+const DISPLAY_CURRENCY='CAD';
+const USD_CAD_RATE=1.38;
 let demoMode=false;
 let quotes={}, openSym=null, detailChart=null, currentTF='1M', matrixMode='conviction', fetchingAll=false, marketRefreshTimer=null;
 
@@ -510,6 +512,27 @@ function apiSymbol(sym){
   return WATCHLIST.find(s=>s.sym===sym)?.api||sym;
 }
 
+function displayValue(v,sym){
+  const meta=WATCHLIST.find(s=>s.sym===sym);
+  const n=Number(v);
+  if(!Number.isFinite(n)) return null;
+  return meta?.cur==='USD'?n*USD_CAD_RATE:n;
+}
+
+function money(v,sym){
+  const converted=displayValue(v,sym);
+  return converted===null?'—':`C$${converted.toFixed(2)}`;
+}
+
+function moneyRaw(v){
+  const n=Number(v);
+  return Number.isFinite(n)?`C$${n.toFixed(2)}`:'—';
+}
+
+function changeMoney(d,sym){
+  return moneyRaw(Math.abs(displayValue(d?.change||0,sym)||0));
+}
+
 // ═══════════════════════════════
 // ALPHA VANTAGE
 // ═══════════════════════════════
@@ -555,7 +578,7 @@ async function fetchAll(opts={}){
   setStatus(false,'Fetching live prices...');
   if(showSkeleton) renderSkeletons();
   await Promise.all(WATCHLIST.map(async s=>{const q=await fetchQuote(s.sym);if(q)quotes[s.sym]=q;}));
-  renderAll(); renderMatrix(); buildTicker(); setStatus(true,`Live Connected · Updated ${timeLabel()}`);
+  renderAll(); renderMatrix(); buildTicker(); setStatus(true,`Live Connected · CAD · Updated ${timeLabel()}`);
   updateAlphaUsage();
   fetchingAll=false;
 }
@@ -640,8 +663,8 @@ function renderCard(s,g){
       <div><div class="sc-sym">${s.sym}</div><div class="sc-name">${s.name}</div></div>
       <span class="sc-type ${tc}">${s.type}</span>
     </div>
-    ${d?`<div class="sc-price">$${d.price.toFixed(2)}</div>
-    <div class="sc-chg ${pos?'up':'dn'}">${pos?'▲':'▼'} ${Math.abs(d.change).toFixed(2)} (${Math.abs(d.pct).toFixed(2)}%)</div>`
+    ${d?`<div class="sc-price">${money(d.price,s.sym)}</div>
+    <div class="sc-chg ${pos?'up':'dn'}">${pos?'▲':'▼'} ${changeMoney(d,s.sym)} (${Math.abs(d.pct).toFixed(2)}%)</div>`
     :`<div class="shimmer" style="height:26px;width:120px;margin-bottom:4px;"></div>`}
     <div class="sparkline"><canvas id="${cid}" width="300" height="52"></canvas></div>
     <div class="fc-row">${['1M','3M','6M','1Y','2Y'].map(tf=>{
@@ -759,35 +782,35 @@ async function openDetail(sym){
     <div class="dp-hdr">
       <div>
         <div class="dp-sym"><span>${sym}</span> ${s.name}</div>
-        <div class="dp-meta">${s.type} · ${s.cur} · AI Confidence ${conf}% · ${demoMode?'Demo Data':'Live Data'}</div>
+        <div class="dp-meta">${s.type} · Displayed in CAD · Native ${s.cur} · AI Confidence ${conf}% · ${demoMode?'Demo Data':'Live Data'}</div>
       </div>
       <button class="dp-close" onclick="closeDetail()">✕ Close</button>
     </div>
     <div class="dp-body">
       <div class="stats-grid">
-        <div class="stat"><span class="stat-lbl">Price</span><div class="stat-val">$${d.price.toFixed(2)}</div></div>
+        <div class="stat"><span class="stat-lbl">Price</span><div class="stat-val">${money(d.price,sym)}</div></div>
         <div class="stat"><span class="stat-lbl">Today</span><div class="stat-val ${pos?'up':'dn'}">${pos?'+':''}${d.pct.toFixed(2)}%</div></div>
-        <div class="stat"><span class="stat-lbl">Change</span><div class="stat-val ${pos?'up':'dn'}">${pos?'+':''}${d.change.toFixed(2)}</div></div>
-        <div class="stat"><span class="stat-lbl">Open</span><div class="stat-val">$${d.open?.toFixed(2)||'—'}</div></div>
-        <div class="stat"><span class="stat-lbl">High</span><div class="stat-val up">$${d.high?.toFixed(2)||'—'}</div></div>
-        <div class="stat"><span class="stat-lbl">Low</span><div class="stat-val dn">$${d.low?.toFixed(2)||'—'}</div></div>
+        <div class="stat"><span class="stat-lbl">Change</span><div class="stat-val ${pos?'up':'dn'}">${pos?'+':'-'}${changeMoney(d,sym)}</div></div>
+        <div class="stat"><span class="stat-lbl">Open</span><div class="stat-val">${money(d.open,sym)}</div></div>
+        <div class="stat"><span class="stat-lbl">High</span><div class="stat-val up">${money(d.high,sym)}</div></div>
+        <div class="stat"><span class="stat-lbl">Low</span><div class="stat-val dn">${money(d.low,sym)}</div></div>
         <div class="stat"><span class="stat-lbl">Volume</span><div class="stat-val">${d.vol||'—'}</div></div>
         <div class="stat"><span class="stat-lbl">Market Cap</span><div class="stat-val gold">${d.mktcap||'—'}</div></div>
         <div class="stat"><span class="stat-lbl">P/E Ratio</span><div class="stat-val">${d.pe||'—'}</div></div>
         <div class="stat"><span class="stat-lbl">Beta</span><div class="stat-val">${d.beta||'—'}</div></div>
         <div class="stat"><span class="stat-lbl">52W Range</span><div class="stat-val" style="font-size:11px">${d.w52||'—'}</div></div>
-        <div class="stat"><span class="stat-lbl">Analyst Target</span><div class="stat-val gold">$${d.analyst||'—'}</div></div>
+        <div class="stat"><span class="stat-lbl">Analyst Target</span><div class="stat-val gold">${money(d.analyst,sym)}</div></div>
       </div>
       <div class="chart-area"><canvas id="detailChart"></canvas></div>
       <table class="fc-table">
         <thead><tr><th>Timeframe</th><th>AI Forecast</th><th>Price Target</th><th>Projection</th></tr></thead>
         <tbody>${Object.entries(fc).map(([tf,pct])=>{
-          const tgt=(d.price*(1+pct/100)).toFixed(2);
+          const tgt=d.price*(1+pct/100);
           const ip=pct>=0; const bw=Math.min(Math.abs(pct)*3.2,100);
           return`<tr>
             <td>${tf}</td>
             <td class="${ip?'up':'dn'}">${ip?'+':''}${pct.toFixed(1)}%</td>
-            <td>$${tgt}</td>
+            <td>${money(tgt,sym)}</td>
             <td><div class="bar-track"><div class="bar-fill" style="width:${bw}%;background:${ip?'var(--green)':'var(--red)'}"></div></div></td>
           </tr>`;
         }).join('')}</tbody>
@@ -817,7 +840,7 @@ async function buildDetailChart(sym,d){
   const history=await fetchHistory(sym);
   const fc=FORECASTS[sym];
   const hLabels=history.map(h=>h.date.slice(5));
-  const hPrices=history.map(h=>h.price);
+  const hPrices=history.map(h=>displayValue(h.price,sym));
   const fcLabels=[]; const fcPrices=[null];
   let last=hPrices[hPrices.length-1];
   const m6=fc['6M']/100/6;
@@ -840,10 +863,10 @@ async function buildDetailChart(sym,d){
     options:{responsive:true,maintainAspectRatio:false,
       plugins:{legend:{labels:{color:'#8a8a8e',font:{family:'DM Mono',size:11},boxWidth:18,padding:14}},
         tooltip:{backgroundColor:'#10131a',borderColor:'#1e2026',borderWidth:1,titleColor:'#8f6dff',bodyColor:'#8a8a8e',
-          callbacks:{label:c=>` $${c.raw?.toFixed(2)??''}`}}},
+          callbacks:{label:c=>` ${moneyRaw(c.raw)}`}}},
       scales:{
         x:{grid:{color:'rgba(255,255,255,0.03)'},ticks:{color:'#3a3a3f',font:{family:'DM Mono',size:9},maxTicksLimit:12}},
-        y:{grid:{color:'rgba(255,255,255,0.03)'},ticks:{color:'#3a3a3f',font:{family:'DM Mono',size:9},callback:v=>`$${v.toFixed(0)}`}}
+        y:{grid:{color:'rgba(255,255,255,0.03)'},ticks:{color:'#3a3a3f',font:{family:'DM Mono',size:9},callback:v=>`C$${v.toFixed(0)}`}}
       }}
   });
 }
@@ -867,13 +890,14 @@ async function runAI(sym,s,d,fc,conf){
   const prompt=`You are the VVS Oracle, an elite AI finance advisor for VVS Capital. Deliver sharp, institutional-grade analysis.
 
 STOCK: ${sym} — ${s.name} (${s.type}, ${s.cur})
-LIVE PRICE DATA:
-- Price: $${d.price.toFixed(2)}
-- Today: ${d.pos?'+':''}${d.pct.toFixed(2)}% ($${d.change.toFixed(2)})
-- Open/High/Low: $${d.open?.toFixed(2)||'N/A'} / $${d.high?.toFixed(2)||'N/A'} / $${d.low?.toFixed(2)||'N/A'}
+LIVE PRICE DATA DISPLAYED IN CAD:
+- Price: ${money(d.price,sym)}
+- Today: ${d.pos?'+':''}${d.pct.toFixed(2)}% (${d.pos?'+':'-'}${changeMoney(d,sym)})
+- Open/High/Low: ${money(d.open,sym)} / ${money(d.high,sym)} / ${money(d.low,sym)}
 - Volume: ${d.vol||'N/A'} | P/E: ${d.pe||'N/A'} | Beta: ${d.beta||'N/A'}
 - 52-Week Range: ${d.w52||'N/A'} | Market Cap: ${d.mktcap||'N/A'}
-- Analyst Consensus Target: $${d.analyst||'N/A'}
+- Analyst Consensus Target: ${money(d.analyst,sym)}
+- Native quote currency: ${s.cur}; USD quotes converted at ${USD_CAD_RATE} USD/CAD for display.
 
 AI FORECASTS:
 1M: ${fc['1M']}% | 3M: ${fc['3M']}% | 6M: ${fc['6M']}% | 1Y: ${fc['1Y']}% | 2Y: ${fc['2Y']}%
@@ -931,36 +955,36 @@ function renderFallback(sym,s,d,fc){
     XEQT:`<div class="ai-sec"><div class="ai-sec-t" style="color:var(--blue)">◈ MARKET OUTLOOK</div><p class="ai-txt">XEQT is showing steady accumulation consistent with risk-on sentiment in global equity markets. The ETF's diversified exposure across Canada, US, and international markets provides natural volatility dampening. Today's ${d.pct.toFixed(2)}% move tracks global equity beta closely, confirming healthy correlation to world markets.</p></div>
 <div class="ai-sec"><div class="ai-sec-t" style="color:var(--gold)">▲ FORECAST RATIONALE</div><p class="ai-txt">The ${fc2}% 2-year forecast is anchored by sustained earnings growth in the underlying global equity basket and XEQT's minimal 0.20% MER. International allocation provides upside if the USD weakens. The ${fc6}% 6-month target assumes continued macro stabilization and rate cuts in developed markets.</p></div>
 <div class="ai-sec"><div class="ai-sec-t" style="color:var(--red)">◉ RISK FACTORS</div><p class="ai-txt">Global recession risk and prolonged USD strength could compress international returns. Geopolitical escalation in Europe or Asia would hit the international sleeve disproportionately. Correlation to Canadian real estate adds indirect housing cycle exposure.</p></div>
-<div class="ai-sec"><div class="ai-sec-t" style="color:var(--green)">◇ ADVISOR RECOMMENDATION</div><p class="ai-txt">XEQT is a strong core holding for Canadian investors. Dollar-cost average monthly — no need to time entry. Ideal as 30–50% of a long-horizon portfolio. At $${d.price.toFixed(2)}, fair value supports a full position. This is a set-it-and-build-it allocation.</p></div>`,
+<div class="ai-sec"><div class="ai-sec-t" style="color:var(--green)">◇ ADVISOR RECOMMENDATION</div><p class="ai-txt">XEQT is a strong core holding for Canadian investors. Dollar-cost average monthly — no need to time entry. Ideal as 30–50% of a long-horizon portfolio. At ${money(d.price,sym)}, fair value supports a full position. This is a set-it-and-build-it allocation.</p></div>`,
     AAPL:`<div class="ai-sec"><div class="ai-sec-t" style="color:var(--blue)">◈ MARKET OUTLOOK</div><p class="ai-txt">Apple is holding above key support with controlled momentum — beta of ${d.beta} means smoother institutional accumulation than peers. Today's ${d.pct.toFixed(2)}% move reflects broad tech sentiment. The P/E of ${d.pe} is elevated but supported by the services revenue flywheel compounding at high margins.</p></div>
-<div class="ai-sec"><div class="ai-sec-t" style="color:var(--gold)">▲ FORECAST RATIONALE</div><p class="ai-txt">The ${fc2}% 2-year forecast is driven by Apple Intelligence AI integration across all device categories, Services revenue approaching $100B annually, and India manufacturing reducing geopolitical risk. Analyst target of $${d.analyst} implies meaningful upside from current levels on consensus alone.</p></div>
+<div class="ai-sec"><div class="ai-sec-t" style="color:var(--gold)">▲ FORECAST RATIONALE</div><p class="ai-txt">The ${fc2}% 2-year forecast is driven by Apple Intelligence AI integration across all device categories, Services revenue approaching $100B annually, and India manufacturing reducing geopolitical risk. Analyst target of ${money(d.analyst,sym)} implies meaningful upside from current levels on consensus alone.</p></div>
 <div class="ai-sec"><div class="ai-sec-t" style="color:var(--red)">◉ RISK FACTORS</div><p class="ai-txt">China revenue (~18% of total) remains the primary geopolitical tail risk. EU App Store regulatory pressure could compress Services margins over 12–18 months. The premium valuation leaves little room for earnings disappointments.</p></div>
-<div class="ai-sec"><div class="ai-sec-t" style="color:var(--green)">◇ ADVISOR RECOMMENDATION</div><p class="ai-txt">AAPL is a buy on any pullback toward $195–200. At current levels, a 5–8% portfolio allocation is appropriate. The AI hardware upgrade cycle is a multi-year thesis — patience is the edge here. Build the position over 2–3 tranches rather than buying all at once.</p></div>`,
+<div class="ai-sec"><div class="ai-sec-t" style="color:var(--green)">◇ ADVISOR RECOMMENDATION</div><p class="ai-txt">AAPL is a buy on any pullback toward ${money(195,sym)}–${money(200,sym)}. At current levels, a 5–8% portfolio allocation is appropriate. The AI hardware upgrade cycle is a multi-year thesis — patience is the edge here. Build the position over 2–3 tranches rather than buying all at once.</p></div>`,
     MSFT:`<div class="ai-sec"><div class="ai-sec-t" style="color:var(--blue)">◈ MARKET OUTLOOK</div><p class="ai-txt">Microsoft is one of the cleanest charts in large-cap tech. Beta of ${d.beta} means smoother drawdowns than peers while the Azure + Copilot revenue ramp provides a consistent fundamental catalyst. Today's ${d.pct.toFixed(2)}% move reflects sustained institutional demand at these levels.</p></div>
-<div class="ai-sec"><div class="ai-sec-t" style="color:var(--gold)">▲ FORECAST RATIONALE</div><p class="ai-txt">The ${fc2}% 2-year forecast — the highest on the watchlist — is backed by 87% AI confidence. Azure growing 20%+ annually, Copilot enterprise seat expansion, and LinkedIn's data moat create compounding earnings power. Analyst target of $${d.analyst} is likely conservative relative to the AI upside scenario.</p></div>
+<div class="ai-sec"><div class="ai-sec-t" style="color:var(--gold)">▲ FORECAST RATIONALE</div><p class="ai-txt">The ${fc2}% 2-year forecast — the highest on the watchlist — is backed by 87% AI confidence. Azure growing 20%+ annually, Copilot enterprise seat expansion, and LinkedIn's data moat create compounding earnings power. Analyst target of ${money(d.analyst,sym)} is likely conservative relative to the AI upside scenario.</p></div>
 <div class="ai-sec"><div class="ai-sec-t" style="color:var(--red)">◉ RISK FACTORS</div><p class="ai-txt">Enterprise IT budget freezes could slow Azure growth. OpenAI dependency creates an unusual key-partner risk. Antitrust scrutiny around AI bundling in enterprise software is an emerging regulatory overhang.</p></div>
-<div class="ai-sec"><div class="ai-sec-t" style="color:var(--green)">◇ ADVISOR RECOMMENDATION</div><p class="ai-txt">MSFT is the highest-conviction buy on the watchlist. An 8–12% portfolio position is fully justified at $${d.price.toFixed(2)}. Buy now, add on any 5–8% pullbacks. This is a 3–5 year hold with exceptional compounding. Pair it with an ETF as the alpha-generating core of your portfolio.</p></div>`,
+<div class="ai-sec"><div class="ai-sec-t" style="color:var(--green)">◇ ADVISOR RECOMMENDATION</div><p class="ai-txt">MSFT is the highest-conviction buy on the watchlist. An 8–12% portfolio position is fully justified at ${money(d.price,sym)}. Buy now, add on any 5–8% pullbacks. This is a 3–5 year hold with exceptional compounding. Pair it with an ETF as the alpha-generating core of your portfolio.</p></div>`,
     NFLX:`<div class="ai-sec"><div class="ai-sec-t" style="color:var(--blue)">◈ MARKET OUTLOOK</div><p class="ai-txt">Netflix is the highest-beta name on the watchlist (${d.beta}) — today's ${d.pct.toFixed(2)}% move illustrates that volatility. The P/E of ${d.pe} demands flawless execution. Content momentum and ad-tier ramp are both tracking well, but the stock prices in a lot of good news already.</p></div>
-<div class="ai-sec"><div class="ai-sec-t" style="color:var(--gold)">▲ FORECAST RATIONALE</div><p class="ai-txt">The ${fc2}% 2-year forecast reflects the ad-supported tier ARPU expansion and live sports rights as new optionality. Password sharing monetization is largely priced in, but international market penetration in Southeast Asia and LATAM is underappreciated. Analyst target of $${d.analyst} is achievable if subscriber growth holds.</p></div>
+<div class="ai-sec"><div class="ai-sec-t" style="color:var(--gold)">▲ FORECAST RATIONALE</div><p class="ai-txt">The ${fc2}% 2-year forecast reflects the ad-supported tier ARPU expansion and live sports rights as new optionality. Password sharing monetization is largely priced in, but international market penetration in Southeast Asia and LATAM is underappreciated. Analyst target of ${money(d.analyst,sym)} is achievable if subscriber growth holds.</p></div>
 <div class="ai-sec"><div class="ai-sec-t" style="color:var(--red)">◉ RISK FACTORS</div><p class="ai-txt">The 1-month forecast of ${fc['1M']}% reflects near-term caution — valuation is stretched and any subscriber miss triggers outsized selloffs. Competition from Disney+, Apple TV+, and Amazon intensifying. Content costs rising with live sports rights bidding wars.</p></div>
-<div class="ai-sec"><div class="ai-sec-t" style="color:var(--green)">◇ ADVISOR RECOMMENDATION</div><p class="ai-txt">NFLX is a high-reward, high-risk position — size accordingly. Limit to 3–5% of portfolio. Wait for a pullback toward $940–960 for a better entry. The 2-year thesis is compelling but requires patience through volatility. Not a core position — a calculated growth bet.</p></div>`,
-    INTC:`<div class="ai-sec"><div class="ai-sec-t" style="color:var(--blue)">◈ MARKET OUTLOOK</div><p class="ai-txt">Intel is in a critical execution phase — the stock reflects maximum uncertainty, trading near multi-year lows at $${d.price.toFixed(2)}. Today's ${d.pct.toFixed(2)}% move is symptomatic of weak near-term sentiment. The market is pricing in foundry failure, which creates the asymmetric opportunity.</p></div>
-<div class="ai-sec"><div class="ai-sec-t" style="color:var(--gold)">▲ FORECAST RATIONALE</div><p class="ai-txt">The ${fc2}% 2-year forecast is the highest absolute return on the watchlist — but with the lowest AI confidence at 58%. The thesis: if Panther Lake yields meet targets and the foundry business attracts external customers, the stock re-rates dramatically. Analyst target of $${d.analyst} implies ${((parseFloat(d.analyst)-d.price)/d.price*100).toFixed(0)}% upside on consensus alone.</p></div>
+<div class="ai-sec"><div class="ai-sec-t" style="color:var(--green)">◇ ADVISOR RECOMMENDATION</div><p class="ai-txt">NFLX is a high-reward, high-risk position — size accordingly. Limit to 3–5% of portfolio. Wait for a pullback toward ${money(940,sym)}–${money(960,sym)} for a better entry. The 2-year thesis is compelling but requires patience through volatility. Not a core position — a calculated growth bet.</p></div>`,
+    INTC:`<div class="ai-sec"><div class="ai-sec-t" style="color:var(--blue)">◈ MARKET OUTLOOK</div><p class="ai-txt">Intel is in a critical execution phase — the stock reflects maximum uncertainty, trading near multi-year lows at ${money(d.price,sym)}. Today's ${d.pct.toFixed(2)}% move is symptomatic of weak near-term sentiment. The market is pricing in foundry failure, which creates the asymmetric opportunity.</p></div>
+<div class="ai-sec"><div class="ai-sec-t" style="color:var(--gold)">▲ FORECAST RATIONALE</div><p class="ai-txt">The ${fc2}% 2-year forecast is the highest absolute return on the watchlist — but with the lowest AI confidence at 58%. The thesis: if Panther Lake yields meet targets and the foundry business attracts external customers, the stock re-rates dramatically. Analyst target of ${money(d.analyst,sym)} implies ${((parseFloat(d.analyst)-d.price)/d.price*100).toFixed(0)}% upside on consensus alone.</p></div>
 <div class="ai-sec"><div class="ai-sec-t" style="color:var(--red)">◉ RISK FACTORS</div><p class="ai-txt">Execution risk is severe — any foundry ramp disappointment could push the stock lower. AMD and TSMC competition is existential if Intel can't close the process node gap. The 1-month forecast of ${fc['1M']}% reflects real near-term downside pressure.</p></div>
 <div class="ai-sec"><div class="ai-sec-t" style="color:var(--green)">◇ ADVISOR RECOMMENDATION</div><p class="ai-txt">INTC is a contrarian, patient-capital position. Maximum 2–3% of portfolio — this is a lottery ticket with a real thesis, not a core holding. Do not average down aggressively. Set a 12-month review checkpoint tied to Panther Lake production milestones. High risk, potentially high reward.</p></div>`,
     VTI:`<div class="ai-sec"><div class="ai-sec-t" style="color:var(--blue)">◈ MARKET OUTLOOK</div><p class="ai-txt">VTI tracks the entire US equity market with beta of ${d.beta} — today's ${d.pct.toFixed(2)}% move is the market itself. Price action is constructive, holding above long-term trend lines. Breadth across the 4,000+ holdings provides natural stabilization against single-stock risk.</p></div>
 <div class="ai-sec"><div class="ai-sec-t" style="color:var(--gold)">▲ FORECAST RATIONALE</div><p class="ai-txt">The ${fc2}% 2-year forecast reflects steady US earnings growth compounding at ~10% annually with dividend reinvestment. Small and mid-cap exposure gives VTI more upside in a rate-cut cycle than VOO. Near-zero costs make every basis point of return count over decades.</p></div>
 <div class="ai-sec"><div class="ai-sec-t" style="color:var(--red)">◉ RISK FACTORS</div><p class="ai-txt">Full exposure to US market cycles — a US recession hits VTI harder than a global ETF. Mega-cap concentration risk (top 10 holdings ~30% of fund) means AAPL and MSFT corrections drag the whole fund. No international diversification.</p></div>
-<div class="ai-sec"><div class="ai-sec-t" style="color:var(--green)">◇ ADVISOR RECOMMENDATION</div><p class="ai-txt">VTI is a cornerstone position at $${d.price.toFixed(2)}. Buy and hold — no timing needed. Ideal as 20–40% of a US-focused portfolio. Pairs well with XEQT for Canadians wanting global + US exposure. Monthly contributions beat lump-sum timing risk over any 10-year window.</p></div>`,
-    VOO:`<div class="ai-sec"><div class="ai-sec-t" style="color:var(--blue)">◈ MARKET OUTLOOK</div><p class="ai-txt">VOO tracking the S&P 500 is the purest expression of US large-cap equity at $${d.price.toFixed(2)}. Today's ${d.pct.toFixed(2)}% move mirrors the index. Mega-cap tech weighting provides growth torque while diversification across 500 names cushions single-stock blowups.</p></div>
+<div class="ai-sec"><div class="ai-sec-t" style="color:var(--green)">◇ ADVISOR RECOMMENDATION</div><p class="ai-txt">VTI is a cornerstone position at ${money(d.price,sym)}. Buy and hold — no timing needed. Ideal as 20–40% of a US-focused portfolio. Pairs well with XEQT for Canadians wanting global + US exposure. Monthly contributions beat lump-sum timing risk over any 10-year window.</p></div>`,
+    VOO:`<div class="ai-sec"><div class="ai-sec-t" style="color:var(--blue)">◈ MARKET OUTLOOK</div><p class="ai-txt">VOO tracking the S&P 500 is the purest expression of US large-cap equity at ${money(d.price,sym)}. Today's ${d.pct.toFixed(2)}% move mirrors the index. Mega-cap tech weighting provides growth torque while diversification across 500 names cushions single-stock blowups.</p></div>
 <div class="ai-sec"><div class="ai-sec-t" style="color:var(--gold)">▲ FORECAST RATIONALE</div><p class="ai-txt">The ${fc2}% 2-year forecast is driven by S&P 500 earnings growth of ~10–12% annually and modest multiple expansion as rates decline. AI infrastructure capex flows through to the top 10 holdings — MSFT, AAPL, NVDA — amplifying returns. Analyst consensus on the index supports the target.</p></div>
 <div class="ai-sec"><div class="ai-sec-t" style="color:var(--red)">◉ RISK FACTORS</div><p class="ai-txt">Concentration in the top 10 names (~35% of fund) creates hidden single-stock risk. A US earnings recession or significant Fed policy error could cause a 20–30% drawdown. No small/mid-cap or international upside.</p></div>
 <div class="ai-sec"><div class="ai-sec-t" style="color:var(--green)">◇ ADVISOR RECOMMENDATION</div><p class="ai-txt">VOO is a buy at any price for a 5+ year horizon. Buy now and set up automatic contributions. An 15–35% portfolio allocation is appropriate depending on risk appetite. The compounding math over 10–20 years is overwhelming — this is generational wealth-building, not trading.</p></div>`,
   };
-  body.innerHTML=INSIGHTS[sym]||`<div class="ai-sec"><div class="ai-sec-t" style="color:var(--blue)">◈ MARKET OUTLOOK</div><p class="ai-txt">${sym} is being monitored as a ${s.type} exposure inside the VVS watchlist. Today's ${d.pct.toFixed(2)}% move gives the position a ${pos?'constructive':'cautious'} near-term tape, while the current price of $${d.price.toFixed(2)} becomes the anchor for the forecast path. Volume, trend persistence, and sector leadership should decide whether this turns into a high-conviction entry or a patience setup.</p></div>
+  body.innerHTML=INSIGHTS[sym]||`<div class="ai-sec"><div class="ai-sec-t" style="color:var(--blue)">◈ MARKET OUTLOOK</div><p class="ai-txt">${sym} is being monitored as a ${s.type} exposure inside the VVS watchlist. Today's ${d.pct.toFixed(2)}% move gives the position a ${pos?'constructive':'cautious'} near-term tape, while the current CAD display price of ${money(d.price,sym)} becomes the anchor for the forecast path. Volume, trend persistence, and sector leadership should decide whether this turns into a high-conviction entry or a patience setup.</p></div>
 <div class="ai-sec"><div class="ai-sec-t" style="color:var(--gold)">▲ FORECAST RATIONALE</div><p class="ai-txt">The model assigns a ${fc6}% 6-month forecast and a ${fc2}% 2-year forecast based on the asset's category, current momentum, and expected earnings or income durability. Upside depends on broad market liquidity, rate expectations, and whether ${sym} can maintain relative strength versus comparable holdings. Analyst or fund targets should be treated as directional context rather than a hard price objective.</p></div>
 <div class="ai-sec"><div class="ai-sec-t" style="color:var(--red)">◉ RISK FACTORS</div><p class="ai-txt">The main risks are valuation compression, macro shocks, and a loss of technical leadership against higher-conviction alternatives. For ETFs, concentration and factor exposure matter; for single stocks, execution and earnings revisions matter more. A break below recent support should reduce position size until momentum repairs.</p></div>
-<div class="ai-sec"><div class="ai-sec-t" style="color:var(--green)">◇ ADVISOR RECOMMENDATION</div><p class="ai-txt">${sym} belongs on the active watchlist, but sizing should match conviction. Use staggered entries, keep single-stock positions smaller than core ETFs, and add only when price action confirms the thesis. For now, treat $${d.price.toFixed(2)} as the reference level and demand better risk/reward before oversizing.</p></div>`;
+<div class="ai-sec"><div class="ai-sec-t" style="color:var(--green)">◇ ADVISOR RECOMMENDATION</div><p class="ai-txt">${sym} belongs on the active watchlist, but sizing should match conviction. Use staggered entries, keep single-stock positions smaller than core ETFs, and add only when price action confirms the thesis. For now, treat ${money(d.price,sym)} as the CAD reference level and demand better risk/reward before oversizing.</p></div>`;
 }
 
 // ═══════════════════════════════
@@ -969,7 +993,7 @@ function renderFallback(sym,s,d,fc){
 function buildTicker(){
   const items=WATCHLIST.map(s=>{
     const d=quotes[s.sym]; if(!d) return`<div class="ti"><span class="ts">${s.sym}</span><span class="tp">—</span></div>`;
-    return`<div class="ti"><span class="ts">${s.sym}</span><span class="tp">$${d.price.toFixed(2)}</span><span class="tc ${d.pos?'tup':'tdn'}">${d.pos?'+':''}${d.pct.toFixed(2)}%</span></div>`;
+    return`<div class="ti"><span class="ts">${s.sym}</span><span class="tp">${money(d.price,s.sym)}</span><span class="tc ${d.pos?'tup':'tdn'}">${d.pos?'+':''}${d.pct.toFixed(2)}%</span></div>`;
   }).join('');
   const el=document.getElementById('tickerEl');
   el.innerHTML=items+items;
@@ -1006,12 +1030,12 @@ async function sendChat(){
   const ctx=WATCHLIST.map(s=>{
     const d=quotes[s.sym]; const fc=FORECASTS[s.sym];
     if(!d) return`${s.sym}: no data`;
-    return`${s.sym}(${s.type}) $${d.price.toFixed(2)} today:${d.pct.toFixed(2)}% 6M:${fc['6M']}% 2Y:${fc['2Y']}% beta:${d.beta} PE:${d.pe} analyst:$${d.analyst}`;
+    return`${s.sym}(${s.type}) ${money(d.price,s.sym)} CAD today:${d.pct.toFixed(2)}% 6M:${fc['6M']}% 2Y:${fc['2Y']}% beta:${d.beta} PE:${d.pe} analyst:${money(d.analyst,s.sym)}`;
   }).join(' | ');
 
   const sys=`You are the VVS Oracle, an elite AI finance advisor for VVS Capital. You advise a motivated retail investor who goes by VVS.
 
-LIVE WATCHLIST: ${ctx}
+LIVE WATCHLIST DISPLAYED IN CAD: ${ctx}
 
 Rules: Be direct, sharp, and conversational. Give specific numbers and price levels. Reference actual watchlist data. Keep responses under 180 words unless deep detail is requested. End with one clear actionable takeaway. You may note this isn't financial advice once if giving specific buy/sell calls — never repeat it.`;
 
