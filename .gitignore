@@ -1,4 +1,5 @@
 .env
 .vercel
 *.log
+.alpha-usage.json
 node_modules

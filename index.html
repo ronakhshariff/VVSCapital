@@ -100,6 +100,8 @@ nav{position:fixed;top:0;left:0;right:0;z-index:500;display:flex;align-items:cen
 
 /* CONTROLS */
 .ctrl-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;flex-wrap:wrap;gap:14px;}
+.ctrl-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.quota-pill{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.4px;color:var(--text2);border:1px solid var(--border);background:var(--bg2);padding:7px 12px;border-radius:8px;white-space:nowrap;}
 .tf-grp{display:flex;gap:3px;background:var(--bg2);border:1px solid var(--border);border-radius:9px;padding:3px;}
 .tf{background:none;border:none;color:var(--text2);font-family:'DM Mono',monospace;font-size:11px;padding:5px 13px;border-radius:7px;cursor:pointer;transition:all .2s;letter-spacing:.5px;}
 .tf.on{background:var(--gold);color:#000;}
@@ -276,10 +278,13 @@ footer{position:relative;z-index:1;border-top:1px solid var(--border);padding:38
       <button class="tf" onclick="setTF('1Y',this)">1Y</button>
       <button class="tf" onclick="setTF('2Y',this)">2Y</button>
     </div>
-    <button class="ref-btn" id="refBtn" onclick="refreshAll()">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-      Refresh Data
-    </button>
+    <div class="ctrl-actions">
+      <span class="quota-pill" id="quotaPill">Alpha: -- / --</span>
+      <button class="ref-btn" id="refBtn" onclick="refreshAll()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+        Refresh Data
+      </button>
+    </div>
   </div>
   <div class="stock-grid" id="stockGrid"></div>
   <div class="detail-panel" id="detailPanel"></div>
@@ -417,6 +422,16 @@ function timeLabel(){
   return new Date().toLocaleTimeString([], {hour:'numeric',minute:'2-digit'});
 }
 
+async function updateAlphaUsage(){
+  try{
+    const r=await fetch('/api/alpha-usage');
+    if(!r.ok) return;
+    const u=await r.json();
+    const el=document.getElementById('quotaPill');
+    if(el) el.textContent=`Alpha: ${u.used}/${u.limit} today · ${u.cacheEntries} cached`;
+  }catch(e){}
+}
+
 function apiSymbol(sym){
   return WATCHLIST.find(s=>s.sym===sym)?.api||sym;
 }
@@ -467,6 +482,7 @@ async function fetchAll(opts={}){
   if(showSkeleton) renderSkeletons();
   await Promise.all(WATCHLIST.map(async s=>{const q=await fetchQuote(s.sym);if(q)quotes[s.sym]=q;}));
   renderAll(); buildTicker(); setStatus(true,`Live Connected · Updated ${timeLabel()}`);
+  updateAlphaUsage();
   fetchingAll=false;
 }
 
@@ -850,6 +866,7 @@ function addMsg(role,content){
 window.addEventListener('load',()=>{
   hideBanner('Local backend connected.');
   fetchAll({showSkeleton:true});
+  updateAlphaUsage();
   startAutoRefresh();
 
   document.getElementById('chatInp').addEventListener('keydown',e=>{if(e.key==='Enter')sendChat();});

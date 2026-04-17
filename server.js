@@ -25,6 +25,26 @@ const PORT = Number(process.env.PORT || 3000);
 const ALPHA_VANTAGE_KEY = process.env.ALPHA_VANTAGE_KEY;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash-lite';
+const ALPHA_DAILY_LIMIT = Number(process.env.ALPHA_DAILY_LIMIT || 25);
+const QUOTE_TTL_MS = Number(process.env.ALPHA_QUOTE_TTL_MS || 60 * 60 * 1000);
+const HISTORY_TTL_MS = Number(process.env.ALPHA_HISTORY_TTL_MS || 12 * 60 * 60 * 1000);
+const ALPHA_STATE_PATH = path.join(ROOT, '.alpha-usage.json');
+
+let alphaState = loadAlphaState();
+
+function loadAlphaState() {
+  try {
+    if (!fs.existsSync(ALPHA_STATE_PATH)) return { day: null, count: 0, cache: {} };
+    const parsed = JSON.parse(fs.readFileSync(ALPHA_STATE_PATH, 'utf8'));
+    return { day: parsed.day || null, count: Number(parsed.count || 0), cache: parsed.cache || {} };
+  } catch {
+    return { day: null, count: 0, cache: {} };
+  }
+}
+
+function saveAlphaState() {
+  fs.writeFileSync(ALPHA_STATE_PATH, JSON.stringify(alphaState, null, 2));
+}
 
 function sendJson(res, status, data) {
   res.writeHead(status, {
@@ -55,14 +75,60 @@ function requireKeys() {
   if (!GEMINI_API_KEY) throw new Error('Missing GEMINI_API_KEY in .env');
 }
 
+function dayKey() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function resetAlphaIfNeeded() {
+  const today = dayKey();
+  if (alphaState.day !== today) {
+    alphaState = { day: today, count: 0, cache: {} };
+    saveAlphaState();
+  }
+}
+
+function alphaUsage() {
+  resetAlphaIfNeeded();
+  return {
+    day: alphaState.day,
+    used: alphaState.count,
+    limit: ALPHA_DAILY_LIMIT,
+    remaining: Math.max(ALPHA_DAILY_LIMIT - alphaState.count, 0),
+    cacheEntries: Object.keys(alphaState.cache).length,
+    quoteTtlMinutes: Math.round(QUOTE_TTL_MS / 60000),
+    historyTtlHours: Math.round(HISTORY_TTL_MS / 3600000),
+  };
+}
+
 async function fetchAlpha(params) {
   if (!ALPHA_VANTAGE_KEY) throw new Error('Missing ALPHA_VANTAGE_KEY in .env');
+  resetAlphaIfNeeded();
+
+  const functionName = params.function || 'UNKNOWN';
+  const ttl = functionName.includes('TIME_SERIES') ? HISTORY_TTL_MS : QUOTE_TTL_MS;
+  const cacheKey = JSON.stringify(params);
+  const cached = alphaState.cache[cacheKey];
+  if (cached && Date.now() - cached.savedAt < ttl) return cached.data;
+
+  if (alphaState.count >= ALPHA_DAILY_LIMIT) {
+    if (cached) return cached.data;
+    throw new Error(`Alpha Vantage daily request limit reached (${ALPHA_DAILY_LIMIT}).`);
+  }
+
   const url = new URL('https://www.alphavantage.co/query');
   for (const [key, value] of Object.entries(params)) url.searchParams.set(key, value);
   url.searchParams.set('apikey', ALPHA_VANTAGE_KEY);
   const response = await fetch(url);
   if (!response.ok) throw new Error(`Alpha Vantage request failed: ${response.status}`);
-  return response.json();
+  const data = await response.json();
+  if (data.Information || data.Note) {
+    if (cached) return cached.data;
+    throw new Error(data.Information || data.Note);
+  }
+  alphaState.count += 1;
+  alphaState.cache[cacheKey] = { savedAt: Date.now(), data };
+  saveAlphaState();
+  return data;
 }
 
 async function handleQuote(reqUrl, res) {
@@ -154,6 +220,7 @@ const server = http.createServer(async (req, res) => {
     if (reqUrl.pathname === '/api/quote' && req.method === 'GET') return await handleQuote(reqUrl, res);
     if (reqUrl.pathname === '/api/history' && req.method === 'GET') return await handleHistory(reqUrl, res);
     if (reqUrl.pathname === '/api/gemini' && req.method === 'POST') return await handleGemini(req, res);
+    if (reqUrl.pathname === '/api/alpha-usage' && req.method === 'GET') return sendJson(res, 200, alphaUsage());
     if (reqUrl.pathname === '/api/health') {
       requireKeys();
       return sendJson(res, 200, { ok: true, model: GEMINI_MODEL });
