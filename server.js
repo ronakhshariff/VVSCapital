@@ -23,15 +23,20 @@ loadEnv();
 
 const PORT = Number(process.env.PORT || 3000);
 const ALPHA_VANTAGE_KEY = process.env.ALPHA_VANTAGE_KEY;
+const FINNHUB_API_KEY = process.env.FINNHUB_API_KEY;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash-lite';
 const ALPHA_DAILY_LIMIT = Number(process.env.ALPHA_DAILY_LIMIT || 25);
 const QUOTE_TTL_MS = Number(process.env.ALPHA_QUOTE_TTL_MS || 60 * 60 * 1000);
 const HISTORY_TTL_MS = Number(process.env.ALPHA_HISTORY_TTL_MS || 12 * 60 * 60 * 1000);
+const FINNHUB_QUOTE_TTL_MS = Number(process.env.FINNHUB_QUOTE_TTL_MS || 15 * 60 * 1000);
+const FINNHUB_HISTORY_TTL_MS = Number(process.env.FINNHUB_HISTORY_TTL_MS || 12 * 60 * 60 * 1000);
+const FINNHUB_PROFILE_TTL_MS = Number(process.env.FINNHUB_PROFILE_TTL_MS || 24 * 60 * 60 * 1000);
 const FX_TTL_MS = Number(process.env.FX_TTL_MS || 12 * 60 * 60 * 1000);
 const ALPHA_STATE_PATH = path.join(ROOT, '.alpha-usage.json');
 
 let alphaState = loadAlphaState();
+let finnhubState = { cache: {} };
 let fxState = { savedAt: 0, rate: 1.38, date: null, source: 'fallback' };
 
 function loadAlphaState() {
@@ -70,6 +75,18 @@ function fmtVol(n) {
   if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
   if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K';
   return String(n);
+}
+
+function fmtCap(n) {
+  if (!Number.isFinite(n)) return '-';
+  if (n >= 1e12) return (n / 1e12).toFixed(2) + 'T';
+  if (n >= 1e9) return (n / 1e9).toFixed(1) + 'B';
+  if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
+  return String(Math.round(n));
+}
+
+function cleanSymbol(value) {
+  return String(value || '').toUpperCase().replace(/[^A-Z0-9.-]/g, '');
 }
 
 function requireKeys() {
@@ -133,6 +150,26 @@ async function fetchAlpha(params) {
   return data;
 }
 
+async function fetchFinnhub(endpoint, params, ttl = FINNHUB_QUOTE_TTL_MS) {
+  if (!FINNHUB_API_KEY) throw new Error('Missing FINNHUB_API_KEY in .env');
+  const cacheKey = `${endpoint}:${JSON.stringify(params)}`;
+  const cached = finnhubState.cache[cacheKey];
+  if (cached && Date.now() - cached.savedAt < ttl) return cached.data;
+
+  const url = new URL(`https://finnhub.io/api/v1${endpoint}`);
+  for (const [key, value] of Object.entries(params)) url.searchParams.set(key, value);
+  url.searchParams.set('token', FINNHUB_API_KEY);
+
+  const response = await fetch(url);
+  if (!response.ok) {
+    if (cached) return cached.data;
+    throw new Error(`Finnhub request failed: ${response.status}`);
+  }
+  const data = await response.json();
+  finnhubState.cache[cacheKey] = { savedAt: Date.now(), data };
+  return data;
+}
+
 async function fetchUsdCad() {
   if (Date.now() - fxState.savedAt < FX_TTL_MS) return fxState;
   const response = await fetch('https://www.bankofcanada.ca/valet/observations/FXUSDCAD/json?recent=1');
@@ -146,7 +183,7 @@ async function fetchUsdCad() {
 }
 
 async function handleQuote(reqUrl, res) {
-  const symbol = (reqUrl.searchParams.get('symbol') || '').toUpperCase().replace(/[^A-Z0-9.-]/g, '');
+  const symbol = cleanSymbol(reqUrl.searchParams.get('symbol'));
   if (!symbol) return sendJson(res, 400, { error: 'Missing symbol' });
 
   const json = await fetchAlpha({ function: 'GLOBAL_QUOTE', symbol });
@@ -173,8 +210,48 @@ async function handleQuote(reqUrl, res) {
   });
 }
 
+async function handleFinnhubQuote(reqUrl, res) {
+  const symbol = cleanSymbol(reqUrl.searchParams.get('symbol'));
+  if (!symbol) return sendJson(res, 400, { error: 'Missing symbol' });
+
+  const [quote, profile, metric] = await Promise.all([
+    fetchFinnhub('/quote', { symbol }, FINNHUB_QUOTE_TTL_MS),
+    fetchFinnhub('/stock/profile2', { symbol }, FINNHUB_PROFILE_TTL_MS).catch(() => ({})),
+    fetchFinnhub('/stock/metric', { symbol, metric: 'all' }, FINNHUB_PROFILE_TTL_MS).catch(() => ({})),
+  ]);
+
+  const price = Number.parseFloat(quote.c);
+  if (!Number.isFinite(price) || price <= 0) return sendJson(res, 502, { error: 'No Finnhub quote returned' });
+
+  const change = Number.parseFloat(quote.d);
+  const metrics = metric.metric || {};
+  const weekLow = Number.parseFloat(metrics['52WeekLow']);
+  const weekHigh = Number.parseFloat(metrics['52WeekHigh']);
+  const marketCap = Number.parseFloat(profile.marketCapitalization || metrics.marketCapitalization);
+  const analyst = Number.parseFloat(metrics.ptMean);
+
+  sendJson(res, 200, {
+    price,
+    change: Number.isFinite(change) ? change : price - Number.parseFloat(quote.pc || price),
+    pct: Number.parseFloat(quote.dp || 0),
+    open: Number.parseFloat(quote.o || price),
+    high: Number.parseFloat(quote.h || price),
+    low: Number.parseFloat(quote.l || price),
+    vol: '-',
+    pe: Number.isFinite(Number.parseFloat(metrics.peNormalizedAnnual)) ? Number.parseFloat(metrics.peNormalizedAnnual).toFixed(1) : '-',
+    beta: Number.isFinite(Number.parseFloat(metrics.beta)) ? Number.parseFloat(metrics.beta).toFixed(2) : '-',
+    w52: Number.isFinite(weekLow) && Number.isFinite(weekHigh) ? `${weekLow.toFixed(2)} - ${weekHigh.toFixed(2)}` : '-',
+    mktcap: fmtCap(Number.isFinite(marketCap) ? marketCap * 1e6 : NaN),
+    analyst: Number.isFinite(analyst) ? analyst.toFixed(2) : '-',
+    pos: Number.parseFloat(quote.d || 0) >= 0,
+    name: profile.name || symbol,
+    currency: profile.currency || 'USD',
+    source: 'Finnhub',
+  });
+}
+
 async function handleHistory(reqUrl, res) {
-  const symbol = (reqUrl.searchParams.get('symbol') || '').toUpperCase().replace(/[^A-Z0-9.-]/g, '');
+  const symbol = cleanSymbol(reqUrl.searchParams.get('symbol'));
   if (!symbol) return sendJson(res, 400, { error: 'Missing symbol' });
 
   const json = await fetchAlpha({
@@ -190,6 +267,24 @@ async function handleHistory(reqUrl, res) {
     .slice(-90)
     .map((date) => ({ date, price: Number.parseFloat(ts[date]['4. close']) }));
   sendJson(res, 200, data);
+}
+
+async function handleFinnhubHistory(reqUrl, res) {
+  const symbol = cleanSymbol(reqUrl.searchParams.get('symbol'));
+  if (!symbol) return sendJson(res, 400, { error: 'Missing symbol' });
+
+  const to = Math.floor(Date.now() / 1000);
+  const from = to - 120 * 24 * 60 * 60;
+  const data = await fetchFinnhub('/stock/candle', { symbol, resolution: 'D', from, to }, FINNHUB_HISTORY_TTL_MS);
+  if (data.s !== 'ok' || !Array.isArray(data.t)) return sendJson(res, 502, { error: 'No Finnhub history returned' });
+
+  const times = data.t.slice(-90);
+  const closes = data.c.slice(-90);
+  const history = times.map((time, index) => ({
+    date: new Date(time * 1000).toISOString().slice(0, 10),
+    price: Number.parseFloat(closes[index]),
+  }));
+  sendJson(res, 200, history);
 }
 
 async function readBody(req) {
@@ -233,6 +328,8 @@ const server = http.createServer(async (req, res) => {
     if (reqUrl.pathname === '/' || reqUrl.pathname === '/index.html') return serveIndex(res);
     if (reqUrl.pathname === '/api/quote' && req.method === 'GET') return await handleQuote(reqUrl, res);
     if (reqUrl.pathname === '/api/history' && req.method === 'GET') return await handleHistory(reqUrl, res);
+    if (reqUrl.pathname === '/api/finnhub-quote' && req.method === 'GET') return await handleFinnhubQuote(reqUrl, res);
+    if (reqUrl.pathname === '/api/finnhub-history' && req.method === 'GET') return await handleFinnhubHistory(reqUrl, res);
     if (reqUrl.pathname === '/api/gemini' && req.method === 'POST') return await handleGemini(req, res);
     if (reqUrl.pathname === '/api/fx' && req.method === 'GET') return sendJson(res, 200, await fetchUsdCad());
     if (reqUrl.pathname === '/api/alpha-usage' && req.method === 'GET') return sendJson(res, 200, alphaUsage());

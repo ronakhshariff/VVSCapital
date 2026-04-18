@@ -113,6 +113,9 @@ nav{position:fixed;top:0;left:0;right:0;z-index:500;display:flex;align-items:cen
 .ref-btn:hover{border-color:var(--gold);color:var(--gold);}
 .ref-btn svg{transition:transform .6s;}
 .ref-btn.spin svg{transform:rotate(360deg);}
+.add-stock-btn{display:flex;align-items:center;gap:8px;background:var(--gold);border:1px solid var(--gold);color:#050608;padding:7px 15px;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;cursor:pointer;transition:all .2s;}
+.add-stock-btn:hover{background:var(--goldl);border-color:var(--goldl);transform:translateY(-1px);}
+.add-stock-btn svg{width:13px;height:13px;stroke-width:2.4px;}
 
 /* STOCK GRID */
 .stock-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px;}
@@ -127,10 +130,14 @@ nav{position:fixed;top:0;left:0;right:0;z-index:500;display:flex;align-items:cen
 .sc-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px;}
 .sc-sym{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:2px;color:var(--gold);line-height:1;}
 .sc-name{font-size:11px;color:var(--text2);margin-top:3px;font-weight:300;}
+.sc-side{display:flex;align-items:flex-start;gap:7px;}
 .sc-type{font-size:10px;letter-spacing:1px;text-transform:uppercase;padding:3px 9px;border-radius:4px;font-weight:500;}
+.stock-remove{width:22px;height:22px;border:1px solid var(--border);background:var(--bg3);color:var(--text2);border-radius:6px;cursor:pointer;font-size:14px;line-height:18px;transition:all .2s;}
+.stock-remove:hover{border-color:var(--red);color:var(--red);}
 .tetf{background:var(--greend);color:var(--green);}
 .ttech{background:var(--blued);color:var(--blue);}
 .tmedia{background:rgba(255,140,0,.1);color:#ff8c00;}
+.twatch{background:var(--goldd);color:var(--goldl);}
 .sc-price{font-family:'DM Mono',monospace;font-size:26px;font-weight:500;line-height:1;margin-bottom:4px;}
 .sc-chg{font-family:'DM Mono',monospace;font-size:12px;display:flex;align-items:center;gap:5px;}
 .up{color:var(--green);} .dn{color:var(--red);}
@@ -147,6 +154,27 @@ nav{position:fixed;top:0;left:0;right:0;z-index:500;display:flex;align-items:cen
 .conf-row{display:flex;justify-content:space-between;font-size:10px;color:var(--text2);margin-bottom:5px;}
 .conf-track{height:2px;background:var(--bg3);border-radius:2px;overflow:hidden;}
 .conf-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--gold),var(--goldl));transition:width 1.2s ease;}
+
+/* ADD STOCK MODAL */
+.modal-backdrop{position:fixed;inset:0;z-index:7000;background:rgba(5,6,8,.74);backdrop-filter:blur(18px);display:none;align-items:center;justify-content:center;padding:22px;}
+.modal-backdrop.open{display:flex;}
+.stock-modal{width:min(460px,100%);border:1px solid var(--borderb);background:linear-gradient(180deg,rgba(16,19,26,.98),rgba(8,9,13,.98));border-radius:16px;box-shadow:0 30px 120px rgba(0,0,0,.55);overflow:hidden;}
+.sm-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:22px 24px;border-bottom:1px solid var(--border);}
+.sm-kicker{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);margin-bottom:4px;}
+.sm-title{font-family:'Bebas Neue',sans-serif;font-size:34px;letter-spacing:2px;line-height:1;}
+.sm-close{background:var(--bg3);border:1px solid var(--border);color:var(--text2);width:32px;height:32px;border-radius:8px;cursor:pointer;transition:all .2s;}
+.sm-close:hover{border-color:var(--red);color:var(--red);}
+.sm-body{padding:22px 24px 24px;}
+.sm-row{display:flex;gap:10px;}
+.sm-input{flex:1;min-width:0;background:var(--bg2);border:1px solid var(--borderb);border-radius:9px;padding:12px 14px;color:var(--text);font-family:'DM Mono',monospace;font-size:14px;outline:none;text-transform:uppercase;transition:border-color .2s;}
+.sm-input:focus{border-color:var(--gold);}
+.sm-input::placeholder{color:var(--text3);}
+.sm-save{background:var(--gold);border:none;border-radius:9px;color:#050608;padding:0 18px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:all .2s;white-space:nowrap;}
+.sm-save:hover{background:var(--goldl);}
+.sm-status{min-height:18px;margin-top:12px;font-size:12px;color:var(--text2);}
+.sm-status.err{color:var(--red);}
+.sm-status.ok{color:var(--green);}
+@media(max-width:540px){.modal-backdrop{padding:14px}.sm-head{padding:19px 18px}.sm-body{padding:18px}.sm-row{display:grid;grid-template-columns:1fr}.sm-save{height:42px}.sm-title{font-size:30px}}
 
 /* DETAIL PANEL */
 .detail-panel{display:none;background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);margin-top:18px;overflow:hidden;animation:sd .3s ease;}
@@ -333,6 +361,10 @@ footer{position:relative;z-index:1;border-top:1px solid var(--border);padding:38
       </div>
       <span class="quota-pill" id="fxPill">FX: USD/CAD --</span>
       <span class="quota-pill" id="quotaPill">Alpha: -- / --</span>
+      <button class="add-stock-btn" onclick="openAddStock()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 5v14M5 12h14"/></svg>
+        Add Stock
+      </button>
       <button class="ref-btn" id="refBtn" onclick="refreshAll()">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
         Refresh Data
@@ -341,6 +373,25 @@ footer{position:relative;z-index:1;border-top:1px solid var(--border);padding:38
   </div>
   <div class="stock-grid" id="stockGrid"></div>
   <div class="detail-panel" id="detailPanel"></div>
+</div>
+
+<div class="modal-backdrop" id="stockModal" onclick="closeAddStock(event)">
+  <div class="stock-modal" role="dialog" aria-modal="true" aria-labelledby="stockModalTitle" onclick="event.stopPropagation()">
+    <div class="sm-head">
+      <div>
+        <div class="sm-kicker">Finnhub Watchlist</div>
+        <div class="sm-title" id="stockModalTitle">Add Stock</div>
+      </div>
+      <button class="sm-close" onclick="closeAddStock()" aria-label="Close">x</button>
+    </div>
+    <form class="sm-body" onsubmit="addLocalStock(event)">
+      <div class="sm-row">
+        <input class="sm-input" id="stockSymbolInput" maxlength="12" autocomplete="off" placeholder="TSLA" />
+        <button class="sm-save" type="submit">Add</button>
+      </div>
+      <div class="sm-status" id="stockAddStatus">Ready.</div>
+    </form>
+  </div>
 </div>
 
 <!-- MATRIX -->
@@ -397,7 +448,7 @@ footer{position:relative;z-index:1;border-top:1px solid var(--border);padding:38
 // ═══════════════════════════════
 // DATA
 // ═══════════════════════════════
-const WATCHLIST = [
+const CORE_WATCHLIST = [
   {sym:'XEQT',name:'iShares Core Equity ETF',              type:'ETF',     cur:'CAD', api:'XEQT.TRT'},
   {sym:'SPY', name:'S&P 500 Index ETF',                    type:'Index',   cur:'USD'},
   {sym:'AAPL',name:'Apple Inc.',                            type:'Tech',    cur:'USD'},
@@ -417,6 +468,7 @@ const WATCHLIST = [
   {sym:'NKE', name:'Nike Inc.',                             type:'Apparel', cur:'USD'},
   {sym:'INTC',name:'Intel Corporation',                     type:'Tech',    cur:'USD'},
 ];
+let WATCHLIST = [...CORE_WATCHLIST];
 
 const DEMO_QUOTES = {
   XEQT:{price:29.84,change:0.62, pct:2.12,  open:29.22,high:30.10,low:29.18,vol:'1.2M', pe:'N/A',beta:'0.92',w52:'24.10 – 31.40',mktcap:'4.8B', analyst:'31.50',pos:true},
@@ -467,6 +519,7 @@ const MARKET_REFRESH_MINUTE=45;
 const MARKET_REFRESH_KEY='vvs_market_refresh_day';
 const DEFAULT_DISPLAY_CURRENCY='USD';
 const CURRENCY_KEY='vvs_display_currency';
+const LOCAL_STOCKS_KEY='vvs_added_stocks';
 const FALLBACK_USD_CAD_RATE=1.38;
 let demoMode=false;
 let quotes={}, openSym=null, detailChart=null, currentTF='1M', matrixMode='conviction', displayCurrency=localStorage.getItem(CURRENCY_KEY)||DEFAULT_DISPLAY_CURRENCY, usdCadRate=FALLBACK_USD_CAD_RATE, fxMeta={source:'fallback',date:null}, fetchingAll=false, marketRefreshTimer=null;
@@ -474,6 +527,98 @@ let quotes={}, openSym=null, detailChart=null, currentTF='1M', matrixMode='convi
 // ═══════════════════════════════
 // KEYS & INIT
 // ═══════════════════════════════
+function cleanLocalSymbol(value){
+  return String(value||'').toUpperCase().replace(/[^A-Z0-9.-]/g,'').slice(0,12);
+}
+
+function stockMeta(sym){
+  return WATCHLIST.find(s=>s.sym===sym);
+}
+
+function fallbackQuote(sym){
+  return DEMO_QUOTES[sym]||{price:100,change:0,pct:0,open:100,high:100,low:100,vol:'-',pe:'-',beta:'-',w52:'-',mktcap:'-',analyst:'-',pos:true,source:'Pending'};
+}
+
+function defaultForecast(sym,d){
+  const pct=Number(d?.pct||0);
+  const lift=Math.max(-1.5,Math.min(2.5,pct*.35));
+  return {'1M':+(0.6+lift).toFixed(1),'3M':+(2.2+lift).toFixed(1),'6M':+(5.4+lift).toFixed(1),'1Y':+(11.8+lift*1.5).toFixed(1),'2Y':+(24.0+lift*2).toFixed(1)};
+}
+
+function ensureModel(sym,d){
+  if(!FORECASTS[sym]) FORECASTS[sym]=defaultForecast(sym,d);
+  if(!CONFIDENCE[sym]) CONFIDENCE[sym]=66;
+}
+
+function loadLocalStocks(){
+  let saved=[];
+  try{saved=JSON.parse(localStorage.getItem(LOCAL_STOCKS_KEY)||'[]');}catch(e){saved=[];}
+  const core=new Set(CORE_WATCHLIST.map(s=>s.sym));
+  const seen=new Set();
+  const added=saved.map(item=>{
+    const sym=cleanLocalSymbol(item.sym||item.symbol);
+    if(!sym||core.has(sym)||seen.has(sym)) return null;
+    seen.add(sym);
+    return{sym,name:item.name||`${sym} Added Stock`,type:item.type||'Watch',cur:item.cur||'USD',api:sym,source:'finnhub',userAdded:true};
+  }).filter(Boolean);
+  WATCHLIST=[...CORE_WATCHLIST,...added];
+  WATCHLIST.forEach(s=>ensureModel(s.sym,quotes[s.sym]||DEMO_QUOTES[s.sym]));
+}
+
+function persistLocalStocks(){
+  const added=WATCHLIST.filter(s=>s.userAdded).map(s=>({sym:s.sym,name:s.name,type:s.type,cur:s.cur,api:s.api,source:'finnhub',userAdded:true}));
+  localStorage.setItem(LOCAL_STOCKS_KEY,JSON.stringify(added));
+}
+
+function openAddStock(){
+  const modal=document.getElementById('stockModal');
+  const input=document.getElementById('stockSymbolInput');
+  const status=document.getElementById('stockAddStatus');
+  if(status){status.className='sm-status';status.textContent='Ready.';}
+  modal?.classList.add('open');
+  setTimeout(()=>input?.focus(),80);
+}
+
+function closeAddStock(event){
+  if(event&&event.target?.id!=='stockModal') return;
+  document.getElementById('stockModal')?.classList.remove('open');
+}
+
+async function addLocalStock(event){
+  event?.preventDefault();
+  const input=document.getElementById('stockSymbolInput');
+  const status=document.getElementById('stockAddStatus');
+  const sym=cleanLocalSymbol(input?.value);
+  if(!sym){status.className='sm-status err';status.textContent='Enter a ticker.';return;}
+  if(stockMeta(sym)){status.className='sm-status err';status.textContent=`${sym} is already here.`;return;}
+
+  const item={sym,name:`${sym} Added Stock`,type:'Watch',cur:'USD',api:sym,source:'finnhub',userAdded:true};
+  WATCHLIST.push(item);
+  quotes[sym]=fallbackQuote(sym);
+  ensureModel(sym,quotes[sym]);
+  persistLocalStocks();
+  renderAll(); renderMatrix(); buildTicker();
+  status.className='sm-status ok';status.textContent=`${sym} added.`;
+  input.value='';
+
+  const q=await fetchQuote(sym);
+  if(q){quotes[sym]=q;ensureModel(sym,q);}
+  persistLocalStocks();
+  renderAll(); renderMatrix(); buildTicker();
+  if(q?.source==='Pending'){status.className='sm-status';status.textContent=`${sym} saved locally. Add Finnhub key for live.`;}
+}
+
+function removeLocalStock(event,sym){
+  event.stopPropagation();
+  WATCHLIST=WATCHLIST.filter(s=>s.sym!==sym);
+  delete quotes[sym];
+  delete FORECASTS[sym];
+  delete CONFIDENCE[sym];
+  persistLocalStocks();
+  if(openSym===sym) closeDetail();
+  renderAll(); renderMatrix(); buildTicker();
+}
+
 function saveKeys(){
   demoMode=false;
   fetchAll();
@@ -481,13 +626,13 @@ function saveKeys(){
 
 function loadDemo(){
   demoMode=true;
-  WATCHLIST.forEach(s=>{quotes[s.sym]={...DEMO_QUOTES[s.sym]};});
+  WATCHLIST.forEach(s=>{quotes[s.sym]={...fallbackQuote(s.sym)};ensureModel(s.sym,quotes[s.sym]);});
   hideBanner('Demo mode — simulated prices. Start localhost to go live.');
   renderAll(); renderMatrix(); buildTicker(); setStatus(true);
 }
 
 function loadFallback(){
-  WATCHLIST.forEach(s=>{quotes[s.sym]={...DEMO_QUOTES[s.sym]};});
+  WATCHLIST.forEach(s=>{quotes[s.sym]={...fallbackQuote(s.sym)};ensureModel(s.sym,quotes[s.sym]);});
   renderAll(); renderMatrix(); buildTicker();
 }
 
@@ -563,11 +708,11 @@ async function updateAlphaUsage(){
 }
 
 function apiSymbol(sym){
-  return WATCHLIST.find(s=>s.sym===sym)?.api||sym;
+  return stockMeta(sym)?.api||sym;
 }
 
 function displayValue(v,sym){
-  const meta=WATCHLIST.find(s=>s.sym===sym);
+  const meta=stockMeta(sym);
   const n=Number(v);
   if(!Number.isFinite(n)) return null;
   if(displayCurrency==='CAD') return meta?.cur==='USD'?n*usdCadRate:n;
@@ -608,19 +753,33 @@ function setCurrency(cur,btn){
 async function fetchQuote(sym){
   if(demoMode) return DEMO_QUOTES[sym]||null;
   try{
-    const r=await fetch(`/api/quote?symbol=${encodeURIComponent(apiSymbol(sym))}`);
-    if(!r.ok) return DEMO_QUOTES[sym];
-    return await r.json();
-  }catch(e){return DEMO_QUOTES[sym];}
+    const meta=stockMeta(sym);
+    const route=meta?.source==='finnhub'?'/api/finnhub-quote':'/api/quote';
+    const r=await fetch(`${route}?symbol=${encodeURIComponent(apiSymbol(sym))}`);
+    if(!r.ok) return fallbackQuote(sym);
+    const data=await r.json();
+    applyProviderMeta(sym,data);
+    return data;
+  }catch(e){return fallbackQuote(sym);}
 }
 
 async function fetchHistory(sym){
   if(demoMode) return fakeHistory(sym);
   try{
-    const r=await fetch(`/api/history?symbol=${encodeURIComponent(apiSymbol(sym))}`);
+    const meta=stockMeta(sym);
+    const route=meta?.source==='finnhub'?'/api/finnhub-history':'/api/history';
+    const r=await fetch(`${route}?symbol=${encodeURIComponent(apiSymbol(sym))}`);
     if(!r.ok) return fakeHistory(sym);
     return await r.json();
   }catch(e){return fakeHistory(sym);}
+}
+
+function applyProviderMeta(sym,data){
+  const meta=stockMeta(sym);
+  if(!meta||!data) return;
+  if(meta.userAdded&&data.name&&data.name!==sym) meta.name=data.name;
+  if(meta.userAdded&&data.currency) meta.cur=data.currency;
+  if(meta.userAdded) persistLocalStocks();
 }
 
 function fakeHistory(sym){
@@ -646,7 +805,7 @@ async function fetchAll(opts={}){
   const showSkeleton=opts.showSkeleton!==false;
   setStatus(false,'Fetching live prices...');
   if(showSkeleton) renderSkeletons();
-  await Promise.all(WATCHLIST.map(async s=>{const q=await fetchQuote(s.sym);if(q)quotes[s.sym]=q;}));
+  await Promise.all(WATCHLIST.map(async s=>{const q=await fetchQuote(s.sym);if(q){quotes[s.sym]=q;ensureModel(s.sym,q);}}));
   renderAll(); renderMatrix(); buildTicker(); setStatus(true,`Live Connected · ${displayCurrency} · Updated ${timeLabel()}`);
   updateAlphaUsage();
   fetchingAll=false;
@@ -722,7 +881,7 @@ function renderCard(s,g){
   const d=quotes[s.sym]; const fc=FORECASTS[s.sym]||{}; const conf=CONFIDENCE[s.sym]||70;
   const pos=d?d.pos:true;
   const signal=getSignal(s.sym,d);
-  const tc=s.type==='ETF'?'tetf':s.type==='Media'?'tmedia':'ttech';
+  const tc=s.type==='ETF'?'tetf':s.type==='Media'?'tmedia':s.type==='Watch'?'twatch':'ttech';
   const cid='sp-'+s.sym;
   const card=document.createElement('div');
   card.className='scard'+(openSym===s.sym?' active':'');
@@ -730,15 +889,18 @@ function renderCard(s,g){
   card.innerHTML=`
     <div class="sc-top">
       <div><div class="sc-sym">${s.sym}</div><div class="sc-name">${s.name}</div></div>
-      <span class="sc-type ${tc}">${s.type}</span>
+      <div class="sc-side">
+        <span class="sc-type ${tc}">${s.userAdded?'Finnhub':s.type}</span>
+        ${s.userAdded?`<button class="stock-remove" onclick="removeLocalStock(event,'${s.sym}')" aria-label="Remove ${s.sym}">x</button>`:''}
+      </div>
     </div>
     ${d?`<div class="sc-price">${money(d.price,s.sym)}</div>
     <div class="sc-chg ${pos?'up':'dn'}">${pos?'▲':'▼'} ${changeMoney(d,s.sym)} (${Math.abs(d.pct).toFixed(2)}%)</div>`
     :`<div class="shimmer" style="height:26px;width:120px;margin-bottom:4px;"></div>`}
     <div class="sparkline"><canvas id="${cid}" width="300" height="52"></canvas></div>
     <div class="fc-row">${['1M','3M','6M','1Y','2Y'].map(tf=>{
-      const v=fc[tf]; const fp=v>=0;
-      return`<div class="fc-col"><span class="fc-lbl">${tf}</span><span class="fc-val ${fp?'up':'dn'}">${v>=0?'+':''}${v?.toFixed(1)}%</span></div>`;
+      const v=Number(fc[tf]||0); const fp=v>=0;
+      return`<div class="fc-col"><span class="fc-lbl">${tf}</span><span class="fc-val ${fp?'up':'dn'}">${v>=0?'+':''}${v.toFixed(1)}%</span></div>`;
     }).join('')}</div>
     <span class="signal ${signal.cls}">${signal.icon} ${signal.label}</span>
     <div class="conf-wrap">
@@ -771,7 +933,7 @@ function setTF(tf,btn){
 // MATRIX
 // ═══════════════════════════════
 function typeRisk(type){
-  return {ETF:30,Index:28,Tech:58,AI:76,Media:68,Apparel:64}[type]||55;
+  return {ETF:30,Index:28,Tech:58,AI:76,Media:68,Apparel:64,Watch:60}[type]||55;
 }
 
 function matrixRole(s,fc,conf,risk){
@@ -780,6 +942,7 @@ function matrixRole(s,fc,conf,risk){
   if(s.type==='Index') return 'Market Compass';
   if(conf>=84) return 'High Conviction';
   if(s.cur==='CAD') return 'Canada Sleeve';
+  if(s.userAdded) return 'Added Watch';
   if(risk>70) return 'Tactical Satellite';
   return 'Quality Watch';
 }
@@ -870,16 +1033,18 @@ function renderMatrix(){
 async function openDetail(sym){
   openSym=sym; renderAll();
   const panel=document.getElementById('detailPanel');
-  const s=WATCHLIST.find(x=>x.sym===sym);
-  const d=quotes[sym]||DEMO_QUOTES[sym];
+  const s=stockMeta(sym);
+  const d=quotes[sym]||fallbackQuote(sym);
+  ensureModel(sym,d);
   const fc=FORECASTS[sym]; const conf=CONFIDENCE[sym]||70; const pos=d.pos;
+  const provider=s.source==='finnhub'?'Finnhub':'Alpha Vantage';
 
   panel.className='detail-panel open';
   panel.innerHTML=`
     <div class="dp-hdr">
       <div>
         <div class="dp-sym"><span>${sym}</span> ${s.name}</div>
-        <div class="dp-meta">${s.type} · Displayed in ${displayCurrency} · Native ${s.cur} · AI Confidence ${conf}% · ${demoMode?'Demo Data':'Live Data'}</div>
+        <div class="dp-meta">${s.type} · ${provider} · Displayed in ${displayCurrency} · Native ${s.cur} · AI Confidence ${conf}% · ${demoMode?'Demo Data':'Live Data'}</div>
       </div>
       <button class="dp-close" onclick="closeDetail()">✕ Close</button>
     </div>
@@ -935,6 +1100,7 @@ function closeDetail(){
 async function buildDetailChart(sym,d){
   if(detailChart){detailChart.destroy();detailChart=null;}
   const history=await fetchHistory(sym);
+  ensureModel(sym,d);
   const fc=FORECASTS[sym];
   const hLabels=history.map(h=>h.date.slice(5));
   const hPrices=history.map(h=>displayValue(h.price,sym));
@@ -1127,7 +1293,8 @@ async function sendChat(){
   const ctx=WATCHLIST.map(s=>{
     const d=quotes[s.sym]; const fc=FORECASTS[s.sym];
     if(!d) return`${s.sym}: no data`;
-    return`${s.sym}(${s.type}) ${money(d.price,s.sym)} ${displayCurrency} today:${d.pct.toFixed(2)}% 6M:${fc['6M']}% 2Y:${fc['2Y']}% beta:${d.beta} PE:${d.pe} analyst:${money(d.analyst,s.sym)}`;
+    ensureModel(s.sym,d);
+    return`${s.sym}(${s.type}${s.userAdded?', Finnhub-added':''}) ${money(d.price,s.sym)} ${displayCurrency} today:${d.pct.toFixed(2)}% 6M:${FORECASTS[s.sym]['6M']}% 2Y:${FORECASTS[s.sym]['2Y']}% beta:${d.beta} PE:${d.pe} analyst:${money(d.analyst,s.sym)}`;
   }).join(' | ');
 
   const sys=`You are the VVS Oracle, an elite AI finance advisor for VVS Capital. You advise a motivated retail investor who goes by VVS.
@@ -1163,6 +1330,7 @@ function addMsg(role,content){
 // ═══════════════════════════════
 window.addEventListener('load',async ()=>{
   hideBanner('Local backend connected.');
+  loadLocalStocks();
   await loadFxRate();
   loadFallback();
   setStatus(true,'Cached baseline · daily live refresh 7:45 AM');
@@ -1171,6 +1339,7 @@ window.addEventListener('load',async ()=>{
   startAutoRefresh();
 
   document.getElementById('chatInp').addEventListener('keydown',e=>{if(e.key==='Enter')sendChat();});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape')closeAddStock();});
   setTimeout(()=>{document.getElementById('loader').classList.add('out');setTimeout(()=>document.getElementById('loader').remove(),700);},2200);
 });
 </script>

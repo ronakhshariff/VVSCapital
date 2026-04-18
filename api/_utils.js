@@ -16,9 +16,20 @@ function fmtVol(n) {
   return String(n);
 }
 
+function fmtCap(n) {
+  if (!Number.isFinite(n)) return '-';
+  if (n >= 1e12) return (n / 1e12).toFixed(2) + 'T';
+  if (n >= 1e9) return (n / 1e9).toFixed(1) + 'B';
+  if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
+  return String(Math.round(n));
+}
+
 const ALPHA_DAILY_LIMIT = Number(process.env.ALPHA_DAILY_LIMIT || 25);
 const QUOTE_TTL_MS = Number(process.env.ALPHA_QUOTE_TTL_MS || 60 * 60 * 1000);
 const HISTORY_TTL_MS = Number(process.env.ALPHA_HISTORY_TTL_MS || 12 * 60 * 60 * 1000);
+const FINNHUB_QUOTE_TTL_MS = Number(process.env.FINNHUB_QUOTE_TTL_MS || 15 * 60 * 1000);
+const FINNHUB_HISTORY_TTL_MS = Number(process.env.FINNHUB_HISTORY_TTL_MS || 12 * 60 * 60 * 1000);
+const FINNHUB_PROFILE_TTL_MS = Number(process.env.FINNHUB_PROFILE_TTL_MS || 24 * 60 * 60 * 1000);
 const FX_TTL_MS = Number(process.env.FX_TTL_MS || 12 * 60 * 60 * 1000);
 
 const state = globalThis.__vvsAlphaState || {
@@ -27,6 +38,11 @@ const state = globalThis.__vvsAlphaState || {
   cache: new Map(),
 };
 globalThis.__vvsAlphaState = state;
+
+const finnhubState = globalThis.__vvsFinnhubState || {
+  cache: new Map(),
+};
+globalThis.__vvsFinnhubState = finnhubState;
 
 const fxState = globalThis.__vvsFxState || {
   savedAt: 0,
@@ -94,6 +110,27 @@ async function fetchAlpha(params) {
   return data;
 }
 
+async function fetchFinnhub(endpoint, params, ttl = FINNHUB_QUOTE_TTL_MS) {
+  const key = process.env.FINNHUB_API_KEY;
+  if (!key) throw new Error('Missing FINNHUB_API_KEY');
+  const cacheKey = `${endpoint}:${JSON.stringify(params)}`;
+  const cached = finnhubState.cache.get(cacheKey);
+  if (cached && Date.now() - cached.savedAt < ttl) return cached.data;
+
+  const url = new URL(`https://finnhub.io/api/v1${endpoint}`);
+  for (const [name, value] of Object.entries(params)) url.searchParams.set(name, value);
+  url.searchParams.set('token', key);
+
+  const response = await fetch(url);
+  if (!response.ok) {
+    if (cached) return cached.data;
+    throw new Error(`Finnhub request failed: ${response.status}`);
+  }
+  const data = await response.json();
+  finnhubState.cache.set(cacheKey, { savedAt: Date.now(), data });
+  return data;
+}
+
 async function usdCadRate() {
   if (Date.now() - fxState.savedAt < FX_TTL_MS) return fxState;
   const response = await fetch('https://www.bankofcanada.ca/valet/observations/FXUSDCAD/json?recent=1');
@@ -109,4 +146,16 @@ async function usdCadRate() {
   return fxState;
 }
 
-module.exports = { alphaUsage, cleanSymbol, fetchAlpha, fmtVol, json, usdCadRate };
+module.exports = {
+  FINNHUB_HISTORY_TTL_MS,
+  FINNHUB_PROFILE_TTL_MS,
+  FINNHUB_QUOTE_TTL_MS,
+  alphaUsage,
+  cleanSymbol,
+  fetchAlpha,
+  fetchFinnhub,
+  fmtCap,
+  fmtVol,
+  json,
+  usdCadRate,
+};
