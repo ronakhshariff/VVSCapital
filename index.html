@@ -464,7 +464,7 @@ const CORE_WATCHLIST = [
   {sym:'XBB', name:'iShares Canadian Universe Bond ETF',    type:'ETF',     cur:'CAD', api:'XBB.TRT'},
   {sym:'XEI', name:'iShares S&P/TSX High Dividend ETF',     type:'ETF',     cur:'CAD', api:'XEI.TRT'},
   {sym:'XEQ', name:'XEQ Canadian Equity ETF',               type:'ETF',     cur:'CAD', api:'XEQ.TRT'},
-  {sym:'NFLX',name:'Netflix Inc.',                          type:'Media',   cur:'USD'},
+  {sym:'NFLX',name:'Netflix Inc.',                          type:'Media',   cur:'USD', source:'finnhub'},
   {sym:'NKE', name:'Nike Inc.',                             type:'Apparel', cur:'USD'},
   {sym:'INTC',name:'Intel Corporation',                     type:'Tech',    cur:'USD'},
 ];
@@ -486,7 +486,7 @@ const DEMO_QUOTES = {
   XBB: {price:27.12,change:0.05,pct:0.18,   open:27.07,high:27.18,low:27.02,vol:'620K', pe:'N/A',beta:'0.18',w52:'25.82 – 28.31',mktcap:'5.9B', analyst:'28.00',pos:true},
   XEI: {price:27.94,change:0.16,pct:0.58,   open:27.78,high:28.02,low:27.70,vol:'910K', pe:'13.6',beta:'0.84',w52:'23.88 – 29.14',mktcap:'2.5B', analyst:'30.00',pos:true},
   XEQ: {price:32.40,change:0.21,pct:0.65,   open:32.16,high:32.48,low:32.05,vol:'210K', pe:'18.9',beta:'0.96',w52:'26.80 – 33.10',mktcap:'1.1B', analyst:'35.00',pos:true},
-  NFLX:{price:992.47,change:-8.33,pct:-0.83,open:1000.80,high:1004.20,low:988.40,vol:'3.8M',pe:'52.8',beta:'1.48',w52:'491.46 – 1064.50',mktcap:'423B',analyst:'1050.00',pos:false},
+  NFLX:{price:97.31,change:-10.48,pct:-9.72,open:96.37,high:98.74,low:95.10,vol:'126.0M',pe:'37.4',beta:'1.62',w52:'75.01 - 134.12',mktcap:'410.9B',analyst:'-',pos:false},
   NKE: {price:72.68,change:-0.42,pct:-0.57, open:73.10,high:73.66,low:72.05,vol:'11.9M',pe:'22.4',beta:'1.11',w52:'52.28 – 98.04',mktcap:'108B', analyst:'82.00',pos:false},
   INTC:{price:20.43,change:-0.17,pct:-0.82, open:20.60,high:20.90,low:20.10,vol:'42.3M',pe:'N/A',beta:'1.03',w52:'18.51 – 43.63',  mktcap:'87.2B',analyst:'26.00', pos:false},
 };
@@ -809,6 +809,17 @@ async function fetchAll(opts={}){
   renderAll(); renderMatrix(); buildTicker(); setStatus(true,`Live Connected · ${displayCurrency} · Updated ${timeLabel()}`);
   updateAlphaUsage();
   fetchingAll=false;
+}
+
+async function refreshFinnhubLive(opts={}){
+  const targets=WATCHLIST.filter(s=>s.source==='finnhub');
+  if(!targets.length) return;
+  await Promise.all(targets.map(async s=>{
+    const q=await fetchQuote(s.sym);
+    if(q){quotes[s.sym]=q;ensureModel(s.sym,q);}
+  }));
+  renderAll(); renderMatrix(); buildTicker();
+  if(opts.status) setStatus(true,`Finnhub Live · ${displayCurrency} · Updated ${timeLabel()}`);
 }
 
 async function refreshAll(){
@@ -1230,7 +1241,7 @@ function renderFallback(sym,s,d,fc){
     NFLX:`<div class="ai-sec"><div class="ai-sec-t" style="color:var(--blue)">◈ MARKET OUTLOOK</div><p class="ai-txt">Netflix is the highest-beta name on the watchlist (${d.beta}) — today's ${d.pct.toFixed(2)}% move illustrates that volatility. The P/E of ${d.pe} demands flawless execution. Content momentum and ad-tier ramp are both tracking well, but the stock prices in a lot of good news already.</p></div>
 <div class="ai-sec"><div class="ai-sec-t" style="color:var(--gold)">▲ FORECAST RATIONALE</div><p class="ai-txt">The ${fc2}% 2-year forecast reflects the ad-supported tier ARPU expansion and live sports rights as new optionality. Password sharing monetization is largely priced in, but international market penetration in Southeast Asia and LATAM is underappreciated. Analyst target of ${money(d.analyst,sym)} is achievable if subscriber growth holds.</p></div>
 <div class="ai-sec"><div class="ai-sec-t" style="color:var(--red)">◉ RISK FACTORS</div><p class="ai-txt">The 1-month forecast of ${fc['1M']}% reflects near-term caution — valuation is stretched and any subscriber miss triggers outsized selloffs. Competition from Disney+, Apple TV+, and Amazon intensifying. Content costs rising with live sports rights bidding wars.</p></div>
-<div class="ai-sec"><div class="ai-sec-t" style="color:var(--green)">◇ ADVISOR RECOMMENDATION</div><p class="ai-txt">NFLX is a high-reward, high-risk position — size accordingly. Limit to 3–5% of portfolio. Wait for a pullback toward ${money(940,sym)}–${money(960,sym)} for a better entry. The 2-year thesis is compelling but requires patience through volatility. Not a core position — a calculated growth bet.</p></div>`,
+<div class="ai-sec"><div class="ai-sec-t" style="color:var(--green)">◇ ADVISOR RECOMMENDATION</div><p class="ai-txt">NFLX is a high-reward, high-risk position — size accordingly. Limit to 3–5% of portfolio. Wait for a pullback toward ${money(94,sym)}–${money(96,sym)} for a better entry. The 2-year thesis is compelling but requires patience through volatility. Not a core position — a calculated growth bet.</p></div>`,
     INTC:`<div class="ai-sec"><div class="ai-sec-t" style="color:var(--blue)">◈ MARKET OUTLOOK</div><p class="ai-txt">Intel is in a critical execution phase — the stock reflects maximum uncertainty, trading near multi-year lows at ${money(d.price,sym)}. Today's ${d.pct.toFixed(2)}% move is symptomatic of weak near-term sentiment. The market is pricing in foundry failure, which creates the asymmetric opportunity.</p></div>
 <div class="ai-sec"><div class="ai-sec-t" style="color:var(--gold)">▲ FORECAST RATIONALE</div><p class="ai-txt">The ${fc2}% 2-year forecast is the highest absolute return on the watchlist — but with the lowest AI confidence at 58%. The thesis: if Panther Lake yields meet targets and the foundry business attracts external customers, the stock re-rates dramatically. Analyst target of ${money(d.analyst,sym)} implies ${((parseFloat(d.analyst)-d.price)/d.price*100).toFixed(0)}% upside on consensus alone.</p></div>
 <div class="ai-sec"><div class="ai-sec-t" style="color:var(--red)">◉ RISK FACTORS</div><p class="ai-txt">Execution risk is severe — any foundry ramp disappointment could push the stock lower. AMD and TSMC competition is existential if Intel can't close the process node gap. The 1-month forecast of ${fc['1M']}% reflects real near-term downside pressure.</p></div>
@@ -1335,6 +1346,7 @@ window.addEventListener('load',async ()=>{
   loadFallback();
   setStatus(true,'Cached baseline · daily live refresh 7:45 AM');
   updateAlphaUsage();
+  refreshFinnhubLive({status:true});
   maybeRunDailyMarketRefresh();
   startAutoRefresh();
 
